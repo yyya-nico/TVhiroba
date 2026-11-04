@@ -44,6 +44,23 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Mpeg2TsPlayer | null>(null);
 
+  useEffect(() => {
+    const focusAdjacentChannel = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
+      const buttons = Array.from(channelListRef.current?.querySelectorAll<HTMLButtonElement>('button.program-service') ?? []);
+      if (buttons.length === 0) return;
+      const index = buttons.findIndex((button) => button === document.activeElement);
+      const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+      const nextIndex = index < 0 ? Math.max(0, selectedIndex) : index + (event.key === 'ArrowRight' ? 1 : -1);
+      event.preventDefault();
+      buttons[nextIndex]?.focus();
+    };
+    window.addEventListener('keydown', focusAdjacentChannel);
+    return () => window.removeEventListener('keydown', focusAdjacentChannel);
+  }, []);
+
   useEffect(() => { void json<Config>('/api/config').then((value) => { setConfig(value); if (value.mirakcUrl) { setAddress(value.mirakcUrl); setSetupView('done'); void loadChannels(); } else setSetupView('welcome'); }).catch((e) => { setMessage(e.message); setSetupView('welcome'); }); }, []);
   useEffect(() => {
     playerRef.current?.destroy(); playerRef.current = null;
