@@ -1,0 +1,34 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_pictureencoder_free: (a: number, b: number) => void;
+export const __wbg_session_free: (a: number, b: number) => void;
+export const firstTimestamp: (a: number, b: number) => [number, number];
+export const lastTimestamp: (a: number, b: number) => [number, number];
+export const pictureencoder_encode: (a: number, b: number, c: number) => [number, number, number];
+export const pictureencoder_new: () => number;
+export const session_audioIsDualMono: (a: number) => number;
+export const session_audioPid: (a: number) => number;
+export const session_audioStreams: (a: number) => [number, number, number];
+export const session_complete: (a: number, b: number, c: number) => [number, number, number];
+export const session_dropped: (a: number) => number;
+export const session_errors: (a: number) => number;
+export const session_finish: (a: number) => [number, number, number];
+export const session_finishDeferred: (a: number) => [number, number, number];
+export const session_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number];
+export const session_originTicks: (a: number) => [number, number];
+export const session_push: (a: number, b: number, c: number) => [number, number, number];
+export const session_pushDeferred: (a: number, b: number, c: number) => [number, number, number];
+export const session_scrambled: (a: number) => number;
+export const session_selectAudio: (a: number, b: number) => void;
+export const session_selectDualMono: (a: number, b: number) => void;
+export const session_serviceId: (a: number) => number;
+export const session_serviceIds: (a: number) => [number, number];
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;
