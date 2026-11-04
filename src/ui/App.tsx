@@ -16,20 +16,6 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-// Use actual card positions so wheel navigation and arrows also work on narrow screens.
-function scrollChannel(list: HTMLDivElement | null, direction: number) {
-  if (!list) return;
-  const listLeft = list.getBoundingClientRect().left + list.clientLeft;
-  const padding = parseFloat(getComputedStyle(list).scrollPaddingLeft) || 0;
-  const max = list.scrollWidth - list.clientWidth;
-  const positions = Array.from(list.children, (card) => Math.max(0, Math.min(max,
-    card.getBoundingClientRect().left - listLeft + list.scrollLeft - padding)));
-  const target = direction > 0
-    ? positions.find((position) => position > list.scrollLeft + 2)
-    : positions.reverse().find((position) => position < list.scrollLeft - 2);
-  if (target !== undefined) list.scrollTo({ left: target, behavior: 'smooth' });
-}
-
 export default function App() {
   const [config, setConfig] = useState<Config>({ mirakcUrl: '' });
   const [address, setAddress] = useState('http://localhost:40772');
@@ -39,6 +25,10 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [cursorVisible, setCursorVisible] = useState(true);
+  const playbackStartedRef = useRef(false);
+  const [broadcastType, setBroadcastType] = useState('GR');
   const [setupView, setSetupView] = useState<SetupView>('loading');
   const channelListRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -63,6 +53,7 @@ export default function App() {
 
   useEffect(() => { void json<Config>('/api/config').then((value) => { setConfig(value); if (value.mirakcUrl) { setAddress(value.mirakcUrl); setSetupView('done'); void loadChannels(); } else setSetupView('welcome'); }).catch((e) => { setMessage(e.message); setSetupView('welcome'); }); }, []);
   useEffect(() => {
+    playbackStartedRef.current = false;
     playerRef.current?.destroy(); playerRef.current = null;
     if (!selected || !videoRef.current) return;
     const streamUrl = new URL(`/api/stream/${selected.id}`, window.location.href).toString();
@@ -90,52 +81,41 @@ export default function App() {
 
   useEffect(() => {
     setUiVisible(true);
-    if (setupView !== 'done' || !selected || settingsOpen || message) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const showUi = () => {
-      setUiVisible(true);
-      clearTimeout(timer);
-      timer = setTimeout(() => setUiVisible(false), 4000);
-    };
-    const events = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'focusin'] as const;
-    events.forEach((event) => window.addEventListener(event, showUi, { passive: true }));
-    showUi();
-    return () => {
-      clearTimeout(timer);
-      events.forEach((event) => window.removeEventListener(event, showUi));
-    };
+    if (message || !selected || settingsOpen) setControlsVisible(true);
   }, [setupView, selected, settingsOpen, message]);
 
   useEffect(() => {
-    const list = channelListRef.current;
-    if (!list) return;
-    let accumulated = 0;
-    let lastEventAt = -Infinity;
-    let lastStepAt = -Infinity;
-    const scrollHorizontally = (event: WheelEvent) => {
-      if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)
-        || list.scrollWidth <= list.clientWidth) return;
-      event.preventDefault();
-      const now = performance.now();
-      if (now - lastEventAt > 180) accumulated = 0;
-      lastEventAt = now;
-      // Discard input during the animation rather than queueing extra steps.
-      if (now - lastStepAt < 300) {
-        accumulated = 0;
-        return;
-      }
-      const unit = event.deltaMode === 1 ? 32 : event.deltaMode === 2 ? list.clientWidth : 1;
-      const delta = event.deltaY * unit;
-      if (Math.sign(delta) !== Math.sign(accumulated)) accumulated = 0;
-      accumulated += delta;
-      if (Math.abs(accumulated) < 40) return;
-      scrollChannel(list, Math.sign(accumulated));
-      accumulated = 0;
-      lastStepAt = now;
+    if (setupView !== 'done') return;
+    let timer: ReturnType<typeof setTimeout>;
+    let cursorTimer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      if (!selected || settingsOpen || message) return;
+      timer = setTimeout(() => {
+        setUiVisible(false);
+        setControlsVisible(false);
+      }, 4000);
     };
-    list.addEventListener('wheel', scrollHorizontally, { passive: false });
-    return () => list.removeEventListener('wheel', scrollHorizontally);
-  }, [setupView, channels]);
+    const showOnMouseMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return;
+      setCursorVisible(true);
+      clearTimeout(cursorTimer);
+      cursorTimer = setTimeout(() => setCursorVisible(false), 4000);
+      resetTimer();
+    };
+    window.addEventListener('pointermove', showOnMouseMove, { passive: true });
+    const activityEvents = ['keydown', 'wheel', 'focusin'] as const;
+    activityEvents.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
+    window.addEventListener('pointerdown', resetTimer, { passive: true });
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(cursorTimer);
+      window.removeEventListener('pointermove', showOnMouseMove);
+      activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
+      window.removeEventListener('pointerdown', resetTimer);
+    };
+  }, [setupView, selected, settingsOpen, message]);
 
   async function loadChannels() {
     setBusy(true); setMessage('チャンネルと番組情報を取得中…');
@@ -165,12 +145,14 @@ export default function App() {
       if (typeOrder) return typeOrder;
       return (a.remoteControlKeyId ?? Infinity) - (b.remoteControlKeyId ?? Infinity);
     });
+  const broadcastTypes = Array.from(new Set(['GR', 'BS', 'CS', ...visibleServices.map((service) => service.channelType.toUpperCase())]));
+  const broadcastLabels: Record<string, string> = { GR: '地デジ', BS: 'BS', CS: 'CS', SKY: 'スカパー！', BS4K: 'BS4K' };
+  const displayedServices = visibleServices.filter((service) => service.channelType.toUpperCase() === broadcastType);
   const formatTime = (timestamp: number) => new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 
   if (setupView !== 'done') return <main className="setup-shell">
     {setupView === 'loading' ? <div className="setup-loading" role="status">設定を読み込んでいます…</div> : <section className="setup-content">
       <div className="setup-copy">
-        <p className="eyebrow">WELCOME TO TVHIROBA</p>
         {setupView === 'welcome' ? <>
           <h1>TVhirobaへようこそ</h1>
           <p className="setup-lead">いつものテレビ環境につないで、ブラウザから視聴を始めましょう。</p>
@@ -192,14 +174,24 @@ export default function App() {
     </section>}
   </main>;
 
-  return <main className={`app-shell${uiVisible ? '' : ' ui-hidden'}`}>
-    <div className="player-frame">{selected ? <video ref={videoRef} autoPlay playsInline /> : <div className="player-placeholder"><p className="eyebrow">TVHIROBA</p><h1>今日は、何を見よう。</h1><p>下のチャンネルから選んで視聴を始めましょう。</p></div>}</div>
+  return <main className={`app-shell${uiVisible ? '' : ' ui-hidden'}${controlsVisible ? '' : ' controls-hidden'}${cursorVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
+    if (event.target instanceof Element && event.target.closest('button, input, textarea, select, label')) return;
+    const visible = !(uiVisible && controlsVisible);
+    setUiVisible(visible);
+    setControlsVisible(visible);
+  }}>
+    <div className="player-frame">{selected && <video ref={videoRef} autoPlay playsInline onPlaying={() => {
+      if (playbackStartedRef.current) return;
+      playbackStartedRef.current = true;
+      setControlsVisible(false);
+    }} />}</div>
     <div className="viewer-actions"><button className="icon-button" onClick={() => setSettingsOpen(!settingsOpen)} aria-label="接続設定" aria-expanded={settingsOpen}>⚙</button></div>
     {settingsOpen && <form className="settings-panel" onSubmit={saveAddress}><div className="settings-title"><label htmlFor="mirakc-url">テレビサーバーの接続設定</label><button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="設定を閉じる">×</button></div><div className="settings-row"><input id="mirakc-url" type="url" placeholder="http://192.168.1.10:40772" value={address} onChange={(e) => setAddress(e.target.value)} required /><button disabled={busy}>{busy ? '確認中…' : '接続して保存'}</button></div><p>Mirakurun / mirakc のサーバーアドレス</p>{message && <p role="status">{message}</p>}</form>}
+    <header className="now-playing"><div><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></header>
     <section className="viewer-overlay" aria-label="テレビの選局">
-      <div className="now-playing"><div><p className="eyebrow">{selected ? '放送中' : 'LIVE TELEVISION'}</p><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></div>
-      <div className="list-heading"><h2>チャンネル <span>{visibleServices.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={() => void loadChannels()} disabled={!config.mirakcUrl || busy} aria-label="一覧を更新">↻</button><button className="icon-button" aria-label="前のチャンネルを表示" onClick={() => scrollChannel(channelListRef.current, -1)}>←</button><button className="icon-button" aria-label="次のチャンネルを表示" onClick={() => scrollChannel(channelListRef.current, 1)}>→</button></div></div>
-      {busy && channels.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : visibleServices.length === 0 ? <div className="empty-state">現在の番組情報があるサービスがありません。一覧を更新してください。</div> : <div className="channel-list" ref={channelListRef}>{visibleServices.map((service) => <button key={service.id} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => { setSelected(service); setMessage(`${service.name} に接続中…`); }}>
+      <div className="list-heading"><h2>チャンネル <span>{visibleServices.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={() => void loadChannels()} disabled={!config.mirakcUrl || busy} aria-label="一覧を更新">↻</button></div></div>
+      <div className="broadcast-types" role="group" aria-label="放送種別">{broadcastTypes.map((type) => <button key={type} type="button" aria-pressed={broadcastType === type} onClick={() => { setBroadcastType(type); channelListRef.current?.scrollTo({ top: 0 }); }}>{broadcastLabels[type] ?? type}</button>)}</div>
+      {busy && channels.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => { setSelected(service); setMessage(`${service.name} に接続中…`); }}>
           <span className="service-name-line"><strong>{service.name}</strong><span className="service-id">{selected?.id === service.id ? '視聴中' : service.channelType}</span></span>
           <span className="current-program"><strong>{service.currentProgram?.name ?? '番組情報なし'}</strong>
             {service.currentProgram && <span className="program-time">{formatTime(service.currentProgram.startAt)} – {formatTime(service.currentProgram.startAt + service.currentProgram.duration)}</span>}

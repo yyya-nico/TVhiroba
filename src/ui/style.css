@@ -6,19 +6,14 @@ button { color: inherit; cursor: pointer; }
 button:disabled { opacity: .5; cursor: wait; }
 button:focus-visible, input:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 h1, h2, p { margin: 0; }
-.eyebrow { color: #aaa; font-size: 11px; letter-spacing: .15em; margin-bottom: 12px; }
-.app-shell { position: relative; height: 100svh; min-height: 560px; overflow: hidden; background: #141414; }
-.player-frame { position: absolute; inset: 0; display: grid; place-items: center; }
+.app-shell { position: relative; height: 100svh; min-height: 0; overflow: hidden; background: #141414; }
+.player-frame { position: absolute; inset: 0; }
 .player-frame video { width: 100%; height: 100%; object-fit: contain; }
-.player-placeholder { text-align: center; padding: 24px 24px 300px; }
-.player-placeholder h1 { font-size: clamp(26px, 4vw, 44px); font-weight: 500; letter-spacing: -.04em; margin-bottom: 16px; }
-.player-placeholder > p:last-child { color: #aaa; font-size: 14px; }
-.viewer-actions { position: absolute; top: 24px; right: 32px; }
+.viewer-actions { position: absolute; bottom: 24px; right: 32px; }
 .icon-button { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1px solid #555; border-radius: 50%; background: rgb(20 20 20 / 85%); font-size: 18px; flex-shrink: 0; }
 .icon-button:hover { background: #383838; }
-.viewer-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px clamp(20px, 4vw, 64px) 24px; background: rgb(20 20 20 / 84%); }
-.now-playing { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 22px; }
-.now-playing .eyebrow { margin-bottom: 6px; }
+.viewer-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(1100px, calc(100% - 64px)); max-height: max(100px, calc(100svh - 220px)); display: flex; flex-direction: column; padding: 20px; background: rgb(20 20 20 / 84%); border: 1px solid #555; border-radius: 8px; }
+.now-playing { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: start; gap: 24px; padding: 12px 16px; background: rgb(20 20 20 / 90%); }
 .now-playing h1 { font-size: 24px; font-weight: 550; }
 .watching-title { color: #ccc; font-size: 14px; margin-top: 6px; }
 .status-message { color: #bbb; font-size: 12px; max-width: 45%; overflow-wrap: anywhere; }
@@ -26,8 +21,11 @@ h1, h2, p { margin: 0; }
 .list-heading h2 { font-size: 14px; font-weight: 500; }
 .list-heading h2 span { color: #aaa; margin-left: 8px; font-size: 12px; }
 .channel-actions { display: flex; gap: 8px; }
-.channel-list { display: flex; gap: 12px; overflow-x: auto; padding: 5px 4px 14px; margin: -5px -4px 0; scroll-snap-type: x proximity; scroll-padding-inline: 4px; scrollbar-width: thin; scrollbar-color: #666 transparent; }
-.program-service { scroll-snap-align: start; flex: 0 0 300px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 14px; border: 1px solid #555; border-radius: 8px; background: rgb(28 28 28 / 90%); text-align: left; }
+.channel-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; overflow-y: auto; min-height: 0; padding: 5px; margin: -5px; scrollbar-width: thin; scrollbar-color: #666 transparent; }
+.broadcast-types { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.broadcast-types button { padding: 8px 16px; border: 1px solid #555; border-radius: 6px; background: #202020; font-size: 13px; }
+.broadcast-types button[aria-pressed="true"] { border-color: #fff; background: #303030; }
+.program-service { width: 100%; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 14px; border: 1px solid #555; border-radius: 8px; background: rgb(28 28 28 / 90%); text-align: left; }
 .program-service:hover { border-color: #aaa; }
 .program-service.selected { border-color: #fff; background: #303030; }
 .service-name-line { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -39,7 +37,7 @@ h1, h2, p { margin: 0; }
 .next-program { display: flex; gap: 10px; padding-top: 12px; border-top: 1px solid #484848; color: #bbb; font-size: 11px; }
 .next-program > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty-state { padding: 24px 0; color: #bbb; font-size: 13px; }
-.settings-panel { position: absolute; z-index: 2; top: 76px; right: 32px; width: min(540px, calc(100% - 40px)); padding: 24px; background: #202020; border: 1px solid #555; border-radius: 8px; }
+.settings-panel { position: absolute; z-index: 2; bottom: 76px; right: 32px; width: min(540px, calc(100% - 40px)); padding: 24px; background: #202020; border: 1px solid #555; border-radius: 8px; }
 .settings-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .settings-title label { font-size: 14px; }
 .settings-row { display: flex; gap: 10px; }
@@ -61,24 +59,20 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .setup-message { font-size: 13px; line-height: 1.6; margin-bottom: 20px; overflow-wrap: anywhere; }
 .setup-loading { color: #aaa; font-size: 14px; }
 @media (max-width: 620px) {
-  .viewer-actions { top: 16px; right: 20px; }
-  .viewer-overlay { padding: 20px 20px 16px; }
-  .now-playing { align-items: start; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .now-playing h1 { font-size: 20px; }
-  .status-message { max-width: 100%; }
-  .program-service { flex-basis: 260px; }
-  .settings-panel { right: 20px; top: 66px; padding: 18px; }
+  .viewer-actions { bottom: 16px; right: 16px; }
+  .now-playing h1 { font-size: 18px; }
+  .viewer-overlay { width: calc(100% - 24px); padding: 12px; }
+  .channel-list { gap: 8px; }
+  .program-service { padding: 10px; gap: 10px; }
+  .service-name-line { align-items: start; flex-direction: column; gap: 4px; }
+  .service-name-line strong { max-width: 100%; }
+  .current-program strong { font-size: 12px; }
+  .program-time { font-size: 10px; }
+  .next-program { gap: 4px; }
+  .settings-panel { right: 16px; bottom: 66px; padding: 18px; }
   .settings-row { flex-direction: column; }
-  .player-placeholder { padding-bottom: 340px; }
 }
-@media (max-height: 600px) and (min-width: 621px) {
-  .app-shell { min-height: 360px; }
-  .viewer-overlay { padding-top: 14px; padding-bottom: 12px; }
-  .now-playing { margin-bottom: 10px; }
-  .watching-title { display: none; }
-  .program-service { gap: 8px; padding: 12px; }
-  .player-placeholder { padding-bottom: 240px; }
-}
+.app-shell.cursor-hidden, .app-shell.cursor-hidden * { cursor: none; }
+.ui-hidden .viewer-actions, .ui-hidden .viewer-overlay, .ui-hidden .now-playing { visibility: hidden; opacity: 0; pointer-events: none; }
 
-.app-shell.ui-hidden, .app-shell.ui-hidden * { cursor: none; }
-.ui-hidden .viewer-actions, .ui-hidden .viewer-overlay { opacity: 0; pointer-events: none; }
+.controls-hidden .viewer-overlay, .controls-hidden .viewer-actions { visibility: hidden; opacity: 0; pointer-events: none; }
