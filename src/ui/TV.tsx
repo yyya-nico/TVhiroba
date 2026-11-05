@@ -31,9 +31,19 @@ export default function TV({ services: availableServices, message, onMessage: se
   useEffect(() => {
     const focusAdjacentChannel = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
       const buttons = Array.from(channelListRef.current?.querySelectorAll<HTMLButtonElement>('button.program-service') ?? []);
+      const remoteKey = /^[0-9]$/.test(event.key) ? (Number(event.key) || 10)
+        : event.key === 'F11' ? 11 : event.key === 'F12' ? 12 : null;
+      if (remoteKey !== null) {
+        const matches = buttons.filter((button) => button.dataset.remoteKey === String(remoteKey));
+        const button = matches.find((candidate) => candidate.dataset.subchannel === 'false') ?? matches[0];
+        if (!button) return;
+        event.preventDefault();
+        if (!event.repeat) button.click();
+        return;
+      }
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       if (buttons.length === 0) return;
       const index = buttons.findIndex((button) => button === document.activeElement);
       const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
@@ -118,8 +128,8 @@ export default function TV({ services: availableServices, message, onMessage: se
     <section className="viewer-overlay" aria-label="テレビの選局">
       <div className="list-heading"><h2>チャンネル <span>{services.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={onRefresh} disabled={!canRefresh || busy} aria-label="一覧を更新">↻</button></div></div>
       <div className="broadcast-types" role="group" aria-label="放送種別">{broadcastTypes.map((type) => <button key={type} type="button" aria-pressed={broadcastType === type} onClick={() => { onBroadcastType(type); channelListRef.current?.scrollTo({ top: 0 }); }}>{broadcastLabels[type] ?? type}</button>)}</div>
-      {busy && services.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => onSelect(service)}>
-          <span className="service-name-line"><strong>{service.name}</strong><span className="service-id">{selected?.id === service.id ? '視聴中' : service.channelType}</span></span>
+      {busy && services.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} data-remote-key={service.remoteControlKeyId} data-subchannel={service.isSubchannel} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => onSelect(service)}>
+          <span className="service-name-line">{service.remoteControlKeyId != null && <span className="remote-control-key" aria-label={`リモコン番号 ${service.remoteControlKeyId}`}>{service.remoteControlKeyId}</span>}<strong>{service.name}</strong><span className="service-id">{selected?.id === service.id ? '視聴中' : service.channelType}</span></span>
           <span className="current-program"><strong>{service.currentProgram?.name ?? '番組情報なし'}</strong>
             {service.currentProgram && <span className="program-time">{formatTime(service.currentProgram.startAt)} – {formatTime(service.currentProgram.startAt + service.currentProgram.duration)}</span>}
           </span>
