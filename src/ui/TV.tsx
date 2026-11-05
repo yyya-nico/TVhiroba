@@ -91,12 +91,16 @@ export default function TV({ services: availableServices, message, onMessage: se
     saveTvPreferences(preferences);
   }, [preferences]);
   const onSelect = useCallback((service: TvService) => {
+    if (selected?.id === service.id) {
+      setControlsVisible(false);
+      return;
+    }
     rememberChannel(service);
     autoSelectPendingRef.current = false;
     hideOnPlaybackRef.current = true;
     setSelected(service);
     setMessage(`${service.name} に接続中…`);
-  }, [rememberChannel, setMessage]);
+  }, [rememberChannel, selected, setControlsVisible, setMessage]);
   const services = useMemo(() => availableServices.filter((service) => Boolean(service.currentProgram?.name?.trim()))
     .sort((a, b) => {
       const typeA = a.channelType.toUpperCase();
