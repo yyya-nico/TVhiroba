@@ -101,8 +101,18 @@ function AppShell({ children, home = false, autoHideTitle = false, controlsVisib
 
   useEffect(() => {
     if (!autoHideTitle || controlsVisible !== undefined || !localControlsVisible) return;
-    const timer = setTimeout(() => setLocalControlsVisible(false), 4000);
-    return () => clearTimeout(timer);
+    let timer: ReturnType<typeof setTimeout>;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setLocalControlsVisible(false), 4000);
+    };
+    const activityEvents = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'focusin'] as const;
+    activityEvents.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
   }, [autoHideTitle, controlsVisible, localControlsVisible]);
 
   const uiVisible = !autoHideTitle || activityVisible;
