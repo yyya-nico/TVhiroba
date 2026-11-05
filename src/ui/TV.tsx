@@ -23,6 +23,8 @@ export default function TV({ services: availableServices, message, onMessage: se
   const [selected, setSelected] = useState<TvService | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
   const playbackStartedRef = useRef(false);
+  const hideOnPlaybackRef = useRef(false);
+  const autoSelectPendingRef = useRef(true);
   const [broadcastType, setBroadcastType] = useState('GR');
   const channelListRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -101,11 +103,26 @@ export default function TV({ services: availableServices, message, onMessage: se
   const onPlaying = () => {
     if (playbackStartedRef.current) return;
     playbackStartedRef.current = true;
-    setControlsVisible(false);
+    if (hideOnPlaybackRef.current) setControlsVisible(false);
   };
 
-  const onBroadcastType = setBroadcastType;
-  const onSelect = (service: TvService) => { setSelected(service); setMessage(`${service.name} に接続中…`); };
+  const onBroadcastType = (type: string) => {
+    const firstService = services.find((service) => service.channelType.toUpperCase() === type);
+    autoSelectPendingRef.current = !firstService;
+    hideOnPlaybackRef.current = false;
+    setBroadcastType(type);
+    setControlsVisible(true);
+    if (firstService) {
+      setSelected(firstService);
+      setMessage(`${firstService.name} に接続中…`);
+    }
+  };
+  const onSelect = (service: TvService) => {
+    autoSelectPendingRef.current = false;
+    hideOnPlaybackRef.current = true;
+    setSelected(service);
+    setMessage(`${service.name} に接続中…`);
+  };
   const services = availableServices.filter((service) => Boolean(service.currentProgram?.name?.trim()))
     .sort((a, b) => {
       const typeA = a.channelType.toUpperCase();
@@ -119,6 +136,16 @@ export default function TV({ services: availableServices, message, onMessage: se
   const broadcastTypes = Array.from(new Set(['GR', 'BS', 'CS', ...services.map((service) => service.channelType.toUpperCase())]));
   const broadcastLabels: Record<string, string> = { GR: '地デジ', BS: 'BS', CS: 'CS', SKY: 'スカパー！', BS4K: 'BS4K' };
   const displayedServices = services.filter((service) => service.channelType.toUpperCase() === broadcastType);
+  // Keep the request pending when channels are still loading or this type is empty.
+  useEffect(() => {
+    if (!autoSelectPendingRef.current || !displayedServices[0]) return;
+    autoSelectPendingRef.current = false;
+    hideOnPlaybackRef.current = false;
+    const service = displayedServices[0];
+    setSelected(service);
+    setControlsVisible(true);
+    setMessage(`${service.name} に接続中…`);
+  });
   const formatTime = (timestamp: number) => new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 
   return <Shell autoHideTitle controlsVisible={controlsVisible} onToggle={() => setControlsVisible((visible) => !visible)}>
