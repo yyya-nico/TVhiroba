@@ -154,12 +154,17 @@ function AppShell({ children, home = false, autoHideTitle = false, controlsVisib
     const showOnMouseMove = (event: PointerEvent) => {
       if (event.pointerType === 'mouse') showActivity();
     };
+    const showOnKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey && !event.ctrlKey && !event.metaKey) showActivity();
+    };
     showActivity();
     window.addEventListener('pointermove', showOnMouseMove, { passive: true });
+    window.addEventListener('keydown', showOnKeyDown);
     window.addEventListener('click', showActivity);
     return () => {
       clearTimeout(timer);
       window.removeEventListener('pointermove', showOnMouseMove);
+      window.removeEventListener('keydown', showOnKeyDown);
       window.removeEventListener('click', showActivity);
     };
   }, [autoHideTitle]);
