@@ -104,7 +104,8 @@ export default function TV({ services: availableServices, message, onMessage: se
       const typeOrder = (channelTypeOrder[typeA] ?? 5) - (channelTypeOrder[typeB] ?? 5)
         || typeA.localeCompare(typeB);
       if (typeOrder) return typeOrder;
-      return (a.remoteControlKeyId ?? Infinity) - (b.remoteControlKeyId ?? Infinity);
+      return (a.remoteControlKeyId ?? Infinity) - (b.remoteControlKeyId ?? Infinity)
+        || a.serviceId - b.serviceId;
     }), [availableServices]);
   const broadcastTypes = Array.from(new Set(['GR', 'BS', 'CS', ...services.map((service) => service.channelType.toUpperCase())]));
   const broadcastLabels: Record<string, string> = { GR: '地デジ', BS: 'BS', CS: 'CS', SKY: 'スカパー！', BS4K: 'BS4K' };
