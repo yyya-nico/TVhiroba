@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import Home from './Home';
+import TV from './TV';
 import { Mpeg2TsPlayer } from '../../vendor/mpeg2toh264-player/src/index.js';
 
-type TvProgram = { id?: number; name?: string; description?: string; startAt: number; duration: number };
-type TvService = { id: number; serviceId: number; networkId?: number; remoteControlKeyId?: number; name: string; type?: number; channelType: string; isSubchannel: boolean; currentProgram: TvProgram | null; nextProgram: TvProgram | null };
+export type TvProgram = { id?: number; name?: string; description?: string; startAt: number; duration: number };
+export type TvService = { id: number; serviceId: number; networkId?: number; remoteControlKeyId?: number; name: string; type?: number; channelType: string; isSubchannel: boolean; currentProgram: TvProgram | null; nextProgram: TvProgram | null };
 type TvChannel = { type: string; channel: string; name: string; services: TvService[] };
 type ChannelResponse = { channels: TvChannel[]; programGuideAvailable: boolean; serviceCount: number; servicesWithGuide: number; generatedAt: number };
 type Config = { mirakcUrl: string };
@@ -20,6 +22,7 @@ export default function App() {
   const [config, setConfig] = useState<Config>({ mirakcUrl: '' });
   const [address, setAddress] = useState('http://localhost:40772');
   const [channels, setChannels] = useState<TvChannel[]>([]);
+  const [screen, setScreen] = useState<'home' | 'tv'>('home');
   const [selected, setSelected] = useState<TvService | null>(null);
   const [message, setMessage] = useState('接続先を設定してください');
   const [busy, setBusy] = useState(false);
@@ -82,10 +85,10 @@ export default function App() {
   useEffect(() => {
     setUiVisible(true);
     if (message || !selected || settingsOpen) setControlsVisible(true);
-  }, [setupView, selected, settingsOpen, message]);
+  }, [setupView, screen, selected, settingsOpen, message]);
 
   useEffect(() => {
-    if (setupView !== 'done') return;
+    if (setupView !== 'done' || screen !== 'tv') return;
     let timer: ReturnType<typeof setTimeout>;
     let cursorTimer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
@@ -115,7 +118,7 @@ export default function App() {
       activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
       window.removeEventListener('pointerdown', resetTimer);
     };
-  }, [setupView, selected, settingsOpen, message]);
+  }, [setupView, screen, selected, settingsOpen, message]);
 
   async function loadChannels() {
     setBusy(true); setMessage('チャンネルと番組情報を取得中…');
@@ -145,10 +148,6 @@ export default function App() {
       if (typeOrder) return typeOrder;
       return (a.remoteControlKeyId ?? Infinity) - (b.remoteControlKeyId ?? Infinity);
     });
-  const broadcastTypes = Array.from(new Set(['GR', 'BS', 'CS', ...visibleServices.map((service) => service.channelType.toUpperCase())]));
-  const broadcastLabels: Record<string, string> = { GR: '地デジ', BS: 'BS', CS: 'CS', SKY: 'スカパー！', BS4K: 'BS4K' };
-  const displayedServices = visibleServices.filter((service) => service.channelType.toUpperCase() === broadcastType);
-  const formatTime = (timestamp: number) => new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 
   if (setupView !== 'done') return <main className="setup-shell">
     {setupView === 'loading' ? <div className="setup-loading" role="status">設定を読み込んでいます…</div> : <section className="setup-content">
@@ -174,30 +173,20 @@ export default function App() {
     </section>}
   </main>;
 
-  return <main className={`app-shell${uiVisible ? '' : ' ui-hidden'}${controlsVisible ? '' : ' controls-hidden'}${cursorVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
+  return <main className={`app-shell${screen === 'home' ? ' home-shell' : ''}${uiVisible ? '' : ' ui-hidden'}${controlsVisible ? '' : ' controls-hidden'}${cursorVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
+    if (screen === 'home') return;
     if (event.target instanceof Element && event.target.closest('button, input, textarea, select, label')) return;
     const visible = !(uiVisible && controlsVisible);
     setUiVisible(visible);
     setControlsVisible(visible);
   }}>
-    <div className="player-frame">{selected && <video ref={videoRef} autoPlay playsInline onPlaying={() => {
+    <div className="viewer-actions"><button className="icon-button" onClick={() => setSettingsOpen(!settingsOpen)} aria-label="接続設定" aria-expanded={settingsOpen}>⚙</button></div>
+    {settingsOpen && <form className="settings-panel" onSubmit={saveAddress}><div className="settings-title"><label htmlFor="mirakc-url">テレビサーバーの接続設定</label><button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="設定を閉じる">×</button></div><div className="settings-row"><input id="mirakc-url" type="url" placeholder="http://192.168.1.10:40772" value={address} onChange={(e) => setAddress(e.target.value)} required /><button disabled={busy}>{busy ? '確認中…' : '接続して保存'}</button></div><p>Mirakurun / mirakc のサーバーアドレス</p>{message && <p role="status">{message}</p>}</form>}
+    {screen === 'home' ? <Home message={message} busy={busy} onWatch={() => { setScreen('tv'); setUiVisible(true); setControlsVisible(true); setCursorVisible(true); }} /> : <TV selected={selected} services={visibleServices} broadcastType={broadcastType} onBroadcastType={setBroadcastType} message={message} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onSelect={(service) => { setSelected(service); setMessage(`${service.name} に接続中…`); }} onHome={() => { setSelected(null); setScreen('home'); setMessage(''); setUiVisible(true); setControlsVisible(true); setCursorVisible(true); }} videoRef={videoRef} channelListRef={channelListRef} onPlaying={() => {
       if (playbackStartedRef.current) return;
       playbackStartedRef.current = true;
       setControlsVisible(false);
-    }} />}</div>
-    <div className="viewer-actions"><button className="icon-button" onClick={() => setSettingsOpen(!settingsOpen)} aria-label="接続設定" aria-expanded={settingsOpen}>⚙</button></div>
-    {settingsOpen && <form className="settings-panel" onSubmit={saveAddress}><div className="settings-title"><label htmlFor="mirakc-url">テレビサーバーの接続設定</label><button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="設定を閉じる">×</button></div><div className="settings-row"><input id="mirakc-url" type="url" placeholder="http://192.168.1.10:40772" value={address} onChange={(e) => setAddress(e.target.value)} required /><button disabled={busy}>{busy ? '確認中…' : '接続して保存'}</button></div><p>Mirakurun / mirakc のサーバーアドレス</p>{message && <p role="status">{message}</p>}</form>}
-    <header className="now-playing"><div><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></header>
-    <section className="viewer-overlay" aria-label="テレビの選局">
-      <div className="list-heading"><h2>チャンネル <span>{visibleServices.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={() => void loadChannels()} disabled={!config.mirakcUrl || busy} aria-label="一覧を更新">↻</button></div></div>
-      <div className="broadcast-types" role="group" aria-label="放送種別">{broadcastTypes.map((type) => <button key={type} type="button" aria-pressed={broadcastType === type} onClick={() => { setBroadcastType(type); channelListRef.current?.scrollTo({ top: 0 }); }}>{broadcastLabels[type] ?? type}</button>)}</div>
-      {busy && channels.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => { setSelected(service); setMessage(`${service.name} に接続中…`); }}>
-          <span className="service-name-line"><strong>{service.name}</strong><span className="service-id">{selected?.id === service.id ? '視聴中' : service.channelType}</span></span>
-          <span className="current-program"><strong>{service.currentProgram?.name ?? '番組情報なし'}</strong>
-            {service.currentProgram && <span className="program-time">{formatTime(service.currentProgram.startAt)} – {formatTime(service.currentProgram.startAt + service.currentProgram.duration)}</span>}
-          </span>
-          <span className="next-program"><span className="program-label">次</span><span>{service.nextProgram?.name ?? '番組情報なし'}</span></span>
-        </button>)}</div>}
-    </section>
+    }} />}
+
   </main>;
 }

@@ -9,7 +9,7 @@ h1, h2, p { margin: 0; }
 .app-shell { position: relative; height: 100svh; min-height: 0; overflow: hidden; background: #141414; }
 .player-frame { position: absolute; inset: 0; }
 .player-frame video { width: 100%; height: 100%; object-fit: contain; }
-.viewer-actions { position: absolute; bottom: 24px; right: 32px; }
+.viewer-actions { z-index: 1; position: absolute; bottom: 24px; right: 32px; }
 .icon-button { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1px solid #555; border-radius: 50%; background: rgb(20 20 20 / 85%); font-size: 18px; flex-shrink: 0; }
 .icon-button:hover { background: #383838; }
 .viewer-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(1100px, calc(100% - 64px)); max-height: max(100px, calc(100svh - 220px)); display: flex; flex-direction: column; padding: 20px; background: rgb(20 20 20 / 84%); border: 1px solid #555; border-radius: 8px; }
@@ -73,6 +73,31 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
   .settings-row { flex-direction: column; }
 }
 .app-shell.cursor-hidden, .app-shell.cursor-hidden * { cursor: none; }
-.ui-hidden .viewer-actions, .ui-hidden .viewer-overlay, .ui-hidden .now-playing { visibility: hidden; opacity: 0; pointer-events: none; }
+.ui-hidden .viewer-actions, .ui-hidden .viewer-overlay, .ui-hidden .now-playing, .ui-hidden .home-back { visibility: hidden; opacity: 0; pointer-events: none; }
 
-.controls-hidden .viewer-overlay, .controls-hidden .viewer-actions { visibility: hidden; opacity: 0; pointer-events: none; }
+.controls-hidden .viewer-overlay, .controls-hidden .viewer-actions, .controls-hidden .home-back { visibility: hidden; opacity: 0; pointer-events: none; }
+
+.home-shell { height: auto; min-height: 100svh; overflow: visible; padding: 48px 32px 96px; }
+.home-content { width: min(1100px, 100%); margin: 0 auto; }
+.home-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
+.home-header h1 { font-size: 32px; font-weight: 550; }
+.home-header p { font-size: 14px; color: #bbb; }
+.home-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+.home-tile { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 32px; min-height: 140px; padding: 24px; text-align: left; border: 1px solid #555; border-radius: 8px; background: #202020; }
+.home-tile strong { font-size: 20px; font-weight: 500; }
+.home-tile > span { display: flex; justify-content: space-between; gap: 16px; width: 100%; font-size: 13px; color: #bbb; }
+.home-tile:hover:enabled { border-color: #aaa; }
+.home-tile:disabled { cursor: default; opacity: .5; }
+.home-status { margin-top: 12px; font-size: 12px; color: #bbb; overflow-wrap: anywhere; }
+.home-shell .viewer-actions { position: fixed; }
+.home-shell .settings-panel { position: fixed; }
+.home-back { position: absolute; z-index: 1; bottom: 24px; left: 32px; min-height: 38px; border: 1px solid #555; border-radius: 19px; background: rgb(20 20 20 / 85%); padding: 8px 16px; font-size: 13px; }
+.home-back:hover { background: #383838; }
+@media (max-width: 620px) {
+  .home-back { bottom: 16px; left: 16px; }
+  .home-shell { padding: 32px 20px 88px; }
+  .home-header { margin-bottom: 32px; }
+  .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .home-tile { min-height: 120px; padding: 16px; gap: 24px; }
+  .home-tile strong { font-size: 18px; }
+}
