@@ -191,7 +191,6 @@ export default function TV({ services: availableServices, message, onMessage: se
   return <Shell autoHideTitle controlsVisible={controlsVisible} onToggle={() => setControlsVisible((visible) => !visible)}>
     <div className="player-frame">{selected && <video ref={videoRef} autoPlay playsInline onPlaying={onPlaying} />}</div>
     <header className="now-playing"><div><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></header>
-    <button className="home-back" onClick={onHome}>← ホーム</button>
     <section className="viewer-overlay" aria-label="テレビの選局">
       <div className="list-heading"><h2>チャンネル <span>{services.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={onRefresh} disabled={!canRefresh || busy} aria-label="一覧を更新">↻</button></div></div>
       <div className="broadcast-types" role="group" aria-label="放送種別">{broadcastTypes.map((type) => <button key={type} type="button" aria-pressed={broadcastType === type} onClick={() => { onBroadcastType(type); channelListRef.current?.scrollTo({ top: 0 }); }}>{broadcastLabels[type] ?? type}</button>)}</div>
@@ -203,5 +202,6 @@ export default function TV({ services: availableServices, message, onMessage: se
           <span className="next-program"><span className="program-label">次</span><span>{service.nextProgram?.name ?? '番組情報なし'}</span></span>
         </button>)}</div>}
     </section>
+    <button className="home-back" onClick={onHome}>← ホーム</button>
   </Shell>;
 }
