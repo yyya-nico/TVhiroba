@@ -1,3 +1,4 @@
+import { useAutoHideControls } from './useAutoHideControls';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import type { AppShellProps } from './App';
 import { Mpeg2TsPlayer } from '../../vendor/mpeg2toh264-player/src/index.js';
@@ -22,7 +23,7 @@ type TVProps = {
 
 export default function TV({ services: availableServices, message, onMessage: setMessage, busy, canRefresh, onRefresh, onHome, Shell }: TVProps) {
   const [selected, setSelected] = useState<TvService | null>(null);
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [controlsVisible, setControlsVisible] = useAutoHideControls(Boolean(selected) && !message, selected);
   const playbackStartedRef = useRef(false);
   const hideOnPlaybackRef = useRef(false);
   const autoSelectPendingRef = useRef(true);
@@ -87,22 +88,6 @@ export default function TV({ services: availableServices, message, onMessage: se
     });
     return () => { disposed = true; player.destroy(); playerRef.current = null; };
   }, [selected]);
-
-  useEffect(() => {
-    if (!selected || message || !controlsVisible) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => setControlsVisible(false), 4000);
-    };
-    const activityEvents = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'focusin'] as const;
-    activityEvents.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
-    resetTimer();
-    return () => {
-      clearTimeout(timer);
-      activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
-    };
-  }, [selected, message, controlsVisible]);
 
   const onPlaying = () => {
     if (playbackStartedRef.current) return;

@@ -1,3 +1,4 @@
+import { useAutoHideControls } from './useAutoHideControls';
 import { useEffect, useState, type ReactNode } from 'react';
 import Home from './Home';
 import TV, { type TvService } from './TV';
@@ -75,7 +76,7 @@ export type AppShellProps = {
 
 function AppShell({ children, home = false, autoHideTitle = false, controlsVisible, onToggle }: AppShellProps) {
   const [activityVisible, setActivityVisible] = useState(true);
-  const [localControlsVisible, setLocalControlsVisible] = useState(true);
+  const [localControlsVisible, setLocalControlsVisible] = useAutoHideControls(autoHideTitle && controlsVisible === undefined);
 
   useEffect(() => {
     setActivityVisible(true);
@@ -98,22 +99,6 @@ function AppShell({ children, home = false, autoHideTitle = false, controlsVisib
       window.removeEventListener('click', showActivity);
     };
   }, [autoHideTitle]);
-
-  useEffect(() => {
-    if (!autoHideTitle || controlsVisible !== undefined || !localControlsVisible) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => setLocalControlsVisible(false), 4000);
-    };
-    const activityEvents = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'focusin'] as const;
-    activityEvents.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
-    resetTimer();
-    return () => {
-      clearTimeout(timer);
-      activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
-    };
-  }, [autoHideTitle, controlsVisible, localControlsVisible]);
 
   const uiVisible = !autoHideTitle || activityVisible;
   const buttonsVisible = !autoHideTitle || (controlsVisible ?? localControlsVisible);
