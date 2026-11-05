@@ -56,12 +56,12 @@ export default function App() {
   const openSettings = () => { setMessage(''); setScreen('settings'); };
   const goHome = () => { setScreen('home'); setMessage(''); };
 
-  if (screen === 'tv') return <TV services={channels.flatMap((channel) => channel.services)} message={message} onMessage={setMessage} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onHome={goHome} onSettings={openSettings} Shell={AppShell} />;
+  if (screen === 'tv') return <TV services={channels.flatMap((channel) => channel.services)} message={message} onMessage={setMessage} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onHome={goHome} Shell={AppShell} />;
 
-  return <AppShell home={screen === 'home'} autoHideTitle={screen === 'input'} onSettings={openSettings}>
+  return <AppShell home={screen === 'home'} autoHideTitle={screen === 'input'}>
     {screen === 'input' && inputDevice
       ? <Input device={inputDevice} onHome={goHome} />
-      : <Home onInput={inputDevice ? () => setScreen('input') : undefined} message={message} busy={busy} onWatch={() => setScreen('tv')} />}
+      : <Home onSettings={openSettings} onInput={inputDevice ? () => setScreen('input') : undefined} message={message} busy={busy} onWatch={() => setScreen('tv')} />}
   </AppShell>;
 }
 
@@ -71,10 +71,9 @@ export type AppShellProps = {
   autoHideTitle?: boolean;
   controlsVisible?: boolean;
   onToggle?: () => void;
-  onSettings: () => void;
 };
 
-function AppShell({ children, home = false, autoHideTitle = false, controlsVisible = true, onToggle, onSettings }: AppShellProps) {
+function AppShell({ children, home = false, autoHideTitle = false, controlsVisible = true, onToggle }: AppShellProps) {
   const [activityVisible, setActivityVisible] = useState(true);
 
   useEffect(() => {
@@ -102,7 +101,6 @@ function AppShell({ children, home = false, autoHideTitle = false, controlsVisib
     if (event.target instanceof Element && event.target.closest('button, input, textarea, select, label')) return;
     onToggle?.();
   }}>
-    <div className="viewer-actions"><button className="icon-button" onClick={onSettings} aria-label="設定">⚙</button></div>
     {children}
   </main>;
 }

@@ -9,7 +9,6 @@ h1, h2, p { margin: 0; }
 .app-shell { position: relative; height: 100svh; min-height: 0; overflow: hidden; background: #141414; }
 .player-frame { position: absolute; inset: 0; }
 .player-frame video { width: 100%; height: 100%; object-fit: contain; }
-.viewer-actions { z-index: 1; position: absolute; bottom: 24px; right: 32px; }
 .icon-button { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1px solid #555; border-radius: 50%; background: rgb(20 20 20 / 85%); font-size: 18px; flex-shrink: 0; }
 .icon-button:hover { background: #383838; }
 .viewer-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(1100px, calc(100% - 64px)); max-height: max(100px, calc(100svh - 220px)); display: flex; flex-direction: column; padding: 20px; background: rgb(20 20 20 / 84%); border: 1px solid #555; border-radius: 8px; }
@@ -55,7 +54,6 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .setup-message { font-size: 13px; line-height: 1.6; margin-bottom: 20px; overflow-wrap: anywhere; }
 .setup-loading { color: #aaa; font-size: 14px; }
 @media (max-width: 620px) {
-  .viewer-actions { bottom: 16px; right: 16px; }
   .now-playing h1 { font-size: 18px; }
   .viewer-overlay { width: calc(100% - 24px); padding: 12px; }
   .channel-list { gap: 8px; }
@@ -68,7 +66,7 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
   .settings-row { flex-direction: column; }
 }
 .app-shell.cursor-hidden, .app-shell.cursor-hidden * { cursor: none; }
-.ui-hidden .now-playing, .ui-hidden .viewer-actions, .ui-hidden .home-back { visibility: hidden; opacity: 0; pointer-events: none; }
+.ui-hidden .now-playing, .ui-hidden .home-back { visibility: hidden; opacity: 0; pointer-events: none; }
 
 .controls-hidden .viewer-overlay { visibility: hidden; opacity: 0; pointer-events: none; }
 
@@ -84,7 +82,6 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .home-tile:hover:enabled { border-color: #aaa; }
 .home-tile:disabled { cursor: default; opacity: .5; }
 .home-status { margin-top: 12px; font-size: 12px; color: #bbb; overflow-wrap: anywhere; }
-.home-shell .viewer-actions { position: fixed; }
 .home-back { position: absolute; z-index: 1; bottom: 24px; left: 32px; min-height: 38px; border: 1px solid #555; border-radius: 19px; background: rgb(20 20 20 / 85%); padding: 8px 16px; font-size: 13px; }
 .home-back:hover { background: #383838; }
 @media (max-width: 620px) {

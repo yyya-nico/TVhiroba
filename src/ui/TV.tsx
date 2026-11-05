@@ -16,11 +16,10 @@ type TVProps = {
   canRefresh: boolean;
   onRefresh: () => void;
   onHome: () => void;
-  onSettings: () => void;
   Shell: ComponentType<AppShellProps>;
 };
 
-export default function TV({ services: availableServices, message, onMessage: setMessage, busy, canRefresh, onRefresh, onHome, onSettings, Shell }: TVProps) {
+export default function TV({ services: availableServices, message, onMessage: setMessage, busy, canRefresh, onRefresh, onHome, Shell }: TVProps) {
   const [selected, setSelected] = useState<TvService | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
   const playbackStartedRef = useRef(false);
@@ -112,7 +111,7 @@ export default function TV({ services: availableServices, message, onMessage: se
   const displayedServices = services.filter((service) => service.channelType.toUpperCase() === broadcastType);
   const formatTime = (timestamp: number) => new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 
-  return <Shell autoHideTitle controlsVisible={controlsVisible} onSettings={onSettings} onToggle={() => setControlsVisible((visible) => !visible)}>
+  return <Shell autoHideTitle controlsVisible={controlsVisible} onToggle={() => setControlsVisible((visible) => !visible)}>
     <div className="player-frame">{selected && <video ref={videoRef} autoPlay playsInline onPlaying={onPlaying} />}</div>
     <header className="now-playing"><div><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></header>
     <button className="home-back" onClick={onHome}>← ホーム</button>
