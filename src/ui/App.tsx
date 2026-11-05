@@ -5,6 +5,7 @@ import TV, { type TvService } from './TV';
 import Input, { readInputDevice, type InputDevice } from './Input';
 import Setup, { type SetupView } from './Setup';
 import Settings from './Settings';
+import { setupDestination, setupUrl, useRoute } from './routing';
 
 type TvChannel = { type: string; channel: string; name: string; services: TvService[] };
 type ChannelResponse = { channels: TvChannel[]; programGuideAvailable: boolean; serviceCount: number; servicesWithGuide: number; generatedAt: number };
@@ -22,12 +23,31 @@ export default function App() {
   const [config, setConfig] = useState<Config>({ mirakcUrl: '' });
   const [address, setAddress] = useState('http://localhost:40772');
   const [channels, setChannels] = useState<TvChannel[]>([]);
-  const [screen, setScreen] = useState<'home' | 'tv' | 'input' | 'settings'>('home');
+  const { path, pathname, search, navigate } = useRoute();
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [inputConfigured, setInputConfigured] = useState(() => readInputDevice() !== undefined);
+  const screen = path === '/tv' ? 'tv' : path === '/input' ? 'input' : path === '/settings' ? 'settings' : 'home';
+  const inSetup = path.startsWith('/setup');
+  const next = inSetup ? setupDestination(search) : path;
   const [message, setMessage] = useState('接続先を設定してください');
   const [busy, setBusy] = useState(false);
-  const [setupView, setSetupView] = useState<SetupView>('loading');
+  const setupView: SetupView = !configLoaded ? 'loading' : path === '/setup/input' ? 'input' : path === '/setup/connection' ? 'connection' : 'welcome';
 
-  useEffect(() => { void json<Config>('/api/config').then((value) => { setConfig(value); if (value.mirakcUrl) { setAddress(value.mirakcUrl); setSetupView(readInputDevice() === undefined ? 'input' : 'done'); void loadChannels(); } else setSetupView('welcome'); }).catch((e) => { setMessage(e.message); setSetupView('welcome'); }); }, []);
+  useEffect(() => {
+    if (!configLoaded) return;
+    if (pathname !== path) { navigate(path, true); return; }
+    if (!config.mirakcUrl) {
+      if (!inSetup || path === '/setup/input') navigate(setupUrl('/setup', next), true);
+    } else if (!inputConfigured) {
+      if (path !== '/setup/input') navigate(setupUrl('/setup/input', next), true);
+    } else if (inSetup) {
+      navigate(next, true);
+    } else if (path === '/input' && !inputDevice) {
+      navigate('/settings', true);
+    }
+  }, [configLoaded, config.mirakcUrl, inputConfigured, inputDevice, path, pathname, search]);
+
+  useEffect(() => { void json<Config>('/api/config').then((value) => { setConfig(value); if (value.mirakcUrl) { setAddress(value.mirakcUrl); void loadChannels(); } }).catch((e) => { setMessage(e.message); }).finally(() => setConfigLoaded(true)); }, []);
   async function loadChannels() {
     setBusy(true); setMessage('チャンネルと番組情報を取得中…');
     try {
@@ -42,27 +62,27 @@ export default function App() {
     event.preventDefault(); setBusy(true); setMessage('接続を確認中…');
     try {
       const value = await json<{ mirakcUrl: string; version?: { current?: string } }>('/api/config', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mirakcUrl: address }) });
-      setConfig({ mirakcUrl: value.mirakcUrl }); setAddress(value.mirakcUrl); setSetupView(setupView === 'connection' ? 'input' : 'done');
+      setConfig({ mirakcUrl: value.mirakcUrl }); setAddress(value.mirakcUrl); if (inSetup) navigate(setupUrl('/setup/input', next), true);
       setMessage(`mirakcに接続しました${value.version?.current ? ` (${value.version.current})` : ''}`); await loadChannels();
     } catch (error) { setMessage(error instanceof Error ? error.message : '接続できませんでした'); }
     finally { setBusy(false); }
   }
 
-  if (setupView !== 'done') return <Setup setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); setSetupView(view); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
-    setInputDevice(value); setSetupView('done'); setMessage('');
+  if (!configLoaded || inSetup || !config.mirakcUrl || !inputConfigured) return <Setup setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); navigate(setupUrl(view === 'connection' ? '/setup/connection' : '/setup', next)); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
+    setInputDevice(value); setInputConfigured(true); navigate(next, true); setMessage('');
   }} />;
 
-  if (screen === 'settings') return <Settings address={address} message={message} busy={busy} inputDevice={inputDevice} onAddressChange={setAddress} onSaveAddress={saveAddress} onClose={() => { setScreen('home'); setMessage(''); }} onInputComplete={setInputDevice} />;
+  if (screen === 'settings') return <Settings address={address} message={message} busy={busy} inputDevice={inputDevice} onAddressChange={setAddress} onSaveAddress={saveAddress} onClose={() => { navigate('/'); setMessage(''); }} onInputComplete={setInputDevice} />;
 
-  const openSettings = () => { setMessage(''); setScreen('settings'); };
-  const goHome = () => { setScreen('home'); setMessage(''); };
+  const openSettings = () => { setMessage(''); navigate('/settings'); };
+  const goHome = () => { navigate('/'); setMessage(''); };
 
   if (screen === 'tv') return <TV services={channels.flatMap((channel) => channel.services)} message={message} onMessage={setMessage} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onHome={goHome} Shell={AppShell} />;
 
   return <AppShell home={screen === 'home'} autoHideTitle={screen === 'input'}>
     {screen === 'input' && inputDevice
       ? <Input device={inputDevice} onHome={goHome} />
-      : <Home onSettings={openSettings} onInput={inputDevice ? () => setScreen('input') : undefined} message={message} busy={busy} onWatch={() => setScreen('tv')} />}
+      : <Home onSettings={openSettings} onInput={inputDevice ? () => navigate('/input') : undefined} message={message} busy={busy} onWatch={() => navigate('/tv')} />}
   </AppShell>;
 }
 
