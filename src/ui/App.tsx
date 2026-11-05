@@ -57,7 +57,7 @@ export default function App() {
       const direction = event.key.slice(5).toLowerCase();
       const originRect = origin?.getBoundingClientRect();
       if (!origin) {
-        const first = focusable[0];
+        const first = focusable.find((element) => element.matches('[data-remote-focus="selected"]')) ?? focusable[0];
         if (first) { event.preventDefault(); first.focus(); }
         return;
       }
