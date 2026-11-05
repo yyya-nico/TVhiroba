@@ -48,3 +48,30 @@ npm run dev
 未設定の場合はセットアップに移動し、元の画面は `?next=%2Ftv` などで保持します。完了後は元の画面に戻ります。設定済みの状態で `/setup` を開くと通常画面へ移動します。個別のセットアップ手順は設定済みでも開けるため、接続設定後には外部入力を再確認できます。外部入力が未登録で `/input` を開いた場合は `/settings` に移動します。不明なパスは `/` に、末尾スラッシュはスラッシュなしに置き換えます。
 
 開発用Viteと本番用Node.jsサーバーは、画面パスへのアクセスに `index.html` を返します。別のWebサーバーで配信する場合も、`/api` と静的ファイル以外の画面パスを `index.html` にフォールバックさせてください。
+
+## ライセンス・利用しているソフトウェア
+
+TVhiroba本体はMITライセンスです。全文は[LICENSE](LICENSE)を参照してください。第三者のソフトウェアには、それぞれのライセンスが適用されます。
+
+### 主な利用物
+
+| ソフトウェア | 用途 | ライセンス |
+| --- | --- | --- |
+| React / React DOM | 画面表示 | MIT |
+| Express | API・静的ファイルの配信 | MIT |
+| mpeg2toh264（プレイヤー・WASM） | ブラウザ内での映像変換・再生 | MIT |
+
+`mpeg2toh264`は[otya128/mpeg2toh264](https://github.com/otya128/mpeg2toh264)のリビジョン`7b008c64c2ff6b5bbca54232712276c852d1e194`由来のプレイヤーソースとWASM成果物を同梱しています。著作権表示とライセンス全文は[vendor/mpeg2toh264-player/LICENSE](vendor/mpeg2toh264-player/LICENSE)、取り込み元の詳細は[NOTICE.md](vendor/mpeg2toh264-player/NOTICE.md)を参照してください。
+
+### 開発・ビルド用の主な依存関係
+
+| ソフトウェア | ライセンス |
+| --- | --- |
+| Vite / @vitejs/plugin-react | MIT |
+| TypeScript | Apache-2.0 |
+| tsx / concurrently | MIT |
+| @types/express / @types/node / @types/react / @types/react-dom | MIT |
+
+上記は主要な直接依存の一覧です。間接依存を含む固定バージョンとライセンス情報は[package-lock.json](package-lock.json)、各ライセンスの全文・著作権表示は各パッケージに付属するLICENSE・NOTICEなどを参照してください。現在のロックファイルには、MIT、Apache-2.0、ISC、BSD-3-Clause、0BSD、CC-BY-4.0の依存関係が含まれます。
+
+mirakc / Mirakurunは接続先の外部サーバーであり、このリポジトリには同梱していません。画像・フォントファイルも同梱していません（CSSのフォント名指定はあります）。
