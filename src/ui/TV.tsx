@@ -1,5 +1,5 @@
 import { useAutoHideControls } from './useAutoHideControls';
-import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import type { AppShellProps } from './App';
 import { Mpeg2TsPlayer } from '../../vendor/mpeg2toh264-player/src/index.js';
 import { readTvPreferences, saveTvPreferences } from './tvPreferences';
@@ -23,7 +23,7 @@ type TVProps = {
 
 export default function TV({ services: availableServices, message, onMessage: setMessage, busy, canRefresh, onRefresh, onHome, Shell }: TVProps) {
   const [selected, setSelected] = useState<TvService | null>(null);
-  const [controlsVisible, setControlsVisible] = useAutoHideControls(Boolean(selected) && !message, selected);
+  const [controlsVisible, setControlsVisible] = useAutoHideControls(Boolean(selected), selected);
   const playbackStartedRef = useRef(false);
   const hideOnPlaybackRef = useRef(false);
   const autoSelectPendingRef = useRef(true);
@@ -34,48 +34,6 @@ export default function TV({ services: availableServices, message, onMessage: se
   const channelListRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Mpeg2TsPlayer | null>(null);
-
-  useEffect(() => {
-    const selectChannelByRemoteKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
-      const buttons = Array.from(channelListRef.current?.querySelectorAll<HTMLButtonElement>('button.program-service') ?? []);
-      const remoteKey = /^[0-9]$/.test(event.key) ? (Number(event.key) || 10)
-        : event.key === 'F11' ? 11 : event.key === 'F12' ? 12 : null;
-      if (remoteKey !== null) {
-        const matches = buttons.filter((button) => button.dataset.remoteKey === String(remoteKey));
-        const button = matches.find((candidate) => candidate.dataset.subchannel === 'false') ?? matches[0];
-        if (!button) return;
-        event.preventDefault();
-        if (!event.repeat) button.click();
-        return;
-      }
-      if (event.key !== 'PageUp' && event.key !== 'PageDown') return;
-      if (!buttons.length) return;
-      event.preventDefault();
-      if (event.repeat) return;
-      const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
-      const nextIndex = selectedIndex < 0 ? (event.key === 'PageUp' ? 0 : buttons.length - 1)
-        : (selectedIndex + (event.key === 'PageUp' ? 1 : -1) + buttons.length) % buttons.length;
-      buttons[nextIndex]?.click();
-    };
-    window.addEventListener('keydown', selectChannelByRemoteKey);
-    return () => window.removeEventListener('keydown', selectChannelByRemoteKey);
-  }, []);
-
-  useEffect(() => {
-    const cycleBroadcastType = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.repeat || event.key.toLowerCase() !== 'b') return;
-      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
-      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.broadcast-types button'));
-      if (!buttons.length) return;
-      event.preventDefault();
-      const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
-      buttons[(selectedIndex + 1) % buttons.length]?.click();
-    };
-    window.addEventListener('keydown', cycleBroadcastType);
-    return () => window.removeEventListener('keydown', cycleBroadcastType);
-  }, []);
 
   useEffect(() => {
     playbackStartedRef.current = false;
@@ -125,20 +83,20 @@ export default function TV({ services: availableServices, message, onMessage: se
       setMessage(`${firstService.name} に接続中…`);
     }
   };
-  const onSelect = (service: TvService) => {
+  const rememberChannel = useCallback((service: TvService) => {
+    const type = service.channelType.toUpperCase();
+    preferences.broadcastType = type;
+    preferences.channels[type] = service.id;
+    saveTvPreferences(preferences);
+  }, [preferences]);
+  const onSelect = useCallback((service: TvService) => {
     rememberChannel(service);
     autoSelectPendingRef.current = false;
     hideOnPlaybackRef.current = true;
     setSelected(service);
     setMessage(`${service.name} に接続中…`);
-  };
-  const rememberChannel = (service: TvService) => {
-    const type = service.channelType.toUpperCase();
-    preferences.broadcastType = type;
-    preferences.channels[type] = service.id;
-    saveTvPreferences(preferences);
-  };
-  const services = availableServices.filter((service) => Boolean(service.currentProgram?.name?.trim()))
+  }, [rememberChannel, setMessage]);
+  const services = useMemo(() => availableServices.filter((service) => Boolean(service.currentProgram?.name?.trim()))
     .sort((a, b) => {
       const typeA = a.channelType.toUpperCase();
       const typeB = b.channelType.toUpperCase();
@@ -146,11 +104,58 @@ export default function TV({ services: availableServices, message, onMessage: se
         || typeA.localeCompare(typeB);
       if (typeOrder) return typeOrder;
       return (a.remoteControlKeyId ?? Infinity) - (b.remoteControlKeyId ?? Infinity);
-    });
-
+    }), [availableServices]);
   const broadcastTypes = Array.from(new Set(['GR', 'BS', 'CS', ...services.map((service) => service.channelType.toUpperCase())]));
   const broadcastLabels: Record<string, string> = { GR: '地デジ', BS: 'BS', CS: 'CS', SKY: 'スカパー！', BS4K: 'BS4K' };
-  const displayedServices = services.filter((service) => service.channelType.toUpperCase() === broadcastType);
+  const displayedServices = useMemo(() => services.filter((service) => service.channelType.toUpperCase() === broadcastType), [services, broadcastType]);
+  useEffect(() => {
+    const handleRemoteKeys = (event: KeyboardEvent) => {
+      if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const isTextEntry = event.target instanceof Element
+        && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]');
+      if (isTextEntry) return;
+
+      const remoteKey = /^[0-9]$/.test(event.key) ? Number(event.key) || 10
+        : event.key === 'F11' ? 11 : event.key === 'F12' ? 12 : null;
+      const isChannelStep = event.key === 'PageUp' || event.key === 'PageDown';
+      const isBroadcastCycle = event.key.toLowerCase() === 'b';
+      const isRemoteControlKey = remoteKey !== null || isChannelStep || isBroadcastCycle;
+      if (isRemoteControlKey || event.key.startsWith('Arrow')) setControlsVisible(true);
+
+      if (remoteKey !== null) {
+        event.preventDefault();
+        if (event.repeat) return;
+        const matches = displayedServices.filter((service) => service.remoteControlKeyId === remoteKey);
+        const service = matches.find((candidate) => !candidate.isSubchannel) ?? matches[0];
+        if (service) onSelect(service);
+        return;
+      }
+
+      const channelButtons = Array.from(channelListRef.current?.querySelectorAll<HTMLButtonElement>('button.program-service') ?? []);
+      if (isChannelStep && channelButtons.length) {
+        event.preventDefault();
+        if (event.repeat) return;
+        const currentIndex = channelButtons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+        const step = event.key === 'PageUp' ? 1 : -1;
+        const nextIndex = currentIndex < 0 ? (step > 0 ? 0 : channelButtons.length - 1)
+          : (currentIndex + step + channelButtons.length) % channelButtons.length;
+        channelButtons[nextIndex]?.click();
+        return;
+      }
+
+      if (isBroadcastCycle && !event.repeat) {
+        const typeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.broadcast-types button'));
+        if (typeButtons.length) {
+          event.preventDefault();
+          const currentIndex = typeButtons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+          typeButtons[(currentIndex + 1) % typeButtons.length]?.click();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleRemoteKeys);
+    return () => window.removeEventListener('keydown', handleRemoteKeys);
+  }, [broadcastType, displayedServices, onSelect, setControlsVisible]);
+
   // Keep the request pending when channels are still loading or this type is empty.
   useEffect(() => {
     if (!autoSelectPendingRef.current || !displayedServices[0]) return;

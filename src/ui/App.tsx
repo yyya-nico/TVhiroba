@@ -56,13 +56,18 @@ export default function App() {
       const origin = active && focusable.includes(active) ? active : null;
       const direction = event.key.slice(5).toLowerCase();
       const originRect = origin?.getBoundingClientRect();
+      if (!origin) {
+        const first = focusable[0];
+        if (first) { event.preventDefault(); first.focus(); }
+        return;
+      }
       const candidates = focusable.filter((element) => element !== origin).map((element) => {
         const rect = element.getBoundingClientRect();
         const dx = rect.left + rect.width / 2 - (originRect ? originRect.left + originRect.width / 2 : 0);
         const dy = rect.top + rect.height / 2 - (originRect ? originRect.top + originRect.height / 2 : 0);
         const primary = direction === 'left' ? -dx : direction === 'right' ? dx : direction === 'up' ? -dy : dy;
         const secondary = direction === 'left' || direction === 'right' ? Math.abs(dy) : Math.abs(dx);
-        return { element, rect, primary, secondary };
+        return { element, primary, secondary };
       }).filter(({ primary }) => primary > 1).sort((a, b) => (a.secondary * 2 + a.primary) - (b.secondary * 2 + b.primary));
       const next = candidates[0]?.element;
       if (!next) return;
