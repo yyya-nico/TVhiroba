@@ -32,6 +32,7 @@ export default function TV({ services: availableServices, message, onMessage: se
   const preferences = preferencesRef.current;
   const [broadcastType, setBroadcastType] = useState(preferences.broadcastType);
   const channelListRef = useRef<HTMLDivElement>(null);
+  const channelNumberCycleRef = useRef<{ key: number; serviceId: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Mpeg2TsPlayer | null>(null);
 
@@ -127,13 +128,25 @@ export default function TV({ services: availableServices, message, onMessage: se
 
       if (remoteKey !== null) {
         event.preventDefault();
-        if (event.repeat) return;
         const matches = displayedServices.filter((service) => service.remoteControlKeyId === remoteKey);
-        const service = matches.find((candidate) => !candidate.isSubchannel) ?? matches[0];
-        if (service) onSelect(service);
+        if (!matches.length) {
+          channelNumberCycleRef.current = null;
+          return;
+        }
+        const previous = channelNumberCycleRef.current;
+        const previousIndex = previous?.key === remoteKey
+          ? matches.findIndex((service) => service.id === previous.serviceId)
+          : -1;
+        const nextIndex = previousIndex >= 0
+          ? (previousIndex + 1) % matches.length
+          : Math.max(0, matches.findIndex((service) => !service.isSubchannel));
+        const service = matches[nextIndex];
+        channelNumberCycleRef.current = { key: remoteKey, serviceId: service.id };
+        onSelect(service);
         return;
       }
 
+      channelNumberCycleRef.current = null;
       const channelButtons = Array.from(channelListRef.current?.querySelectorAll<HTMLButtonElement>('button.program-service') ?? []);
       if (isChannelStep && channelButtons.length) {
         event.preventDefault();
