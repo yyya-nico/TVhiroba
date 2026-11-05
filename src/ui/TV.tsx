@@ -50,6 +50,16 @@ export default function TV({ services: availableServices, message, onMessage: se
         if (!event.repeat) button.click();
         return;
       }
+      if (event.key === 'PageUp' || event.key === 'PageDown') {
+        if (buttons.length === 0) return;
+        event.preventDefault();
+        if (event.repeat) return;
+        const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+        const nextIndex = selectedIndex < 0 ? (event.key === 'PageUp' ? 0 : buttons.length - 1)
+          : (selectedIndex + (event.key === 'PageUp' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[nextIndex]?.click();
+        return;
+      }
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       if (buttons.length === 0) return;
       const index = buttons.findIndex((button) => button === document.activeElement);
