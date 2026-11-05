@@ -73,33 +73,45 @@ export type AppShellProps = {
   onToggle?: () => void;
 };
 
-function AppShell({ children, home = false, autoHideTitle = false, controlsVisible = true, onToggle }: AppShellProps) {
+function AppShell({ children, home = false, autoHideTitle = false, controlsVisible, onToggle }: AppShellProps) {
   const [activityVisible, setActivityVisible] = useState(true);
+  const [localControlsVisible, setLocalControlsVisible] = useState(true);
 
   useEffect(() => {
     setActivityVisible(true);
     if (!autoHideTitle) return;
     let timer: ReturnType<typeof setTimeout>;
-    const showOnMouseMove = (event?: PointerEvent) => {
-      if (event && event.pointerType !== 'mouse') return;
+    const showActivity = () => {
       setActivityVisible(true);
       clearTimeout(timer);
       timer = setTimeout(() => setActivityVisible(false), 4000);
     };
-    showOnMouseMove();
+    const showOnMouseMove = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') showActivity();
+    };
+    showActivity();
     window.addEventListener('pointermove', showOnMouseMove, { passive: true });
+    window.addEventListener('click', showActivity);
     return () => {
       clearTimeout(timer);
       window.removeEventListener('pointermove', showOnMouseMove);
+      window.removeEventListener('click', showActivity);
     };
   }, [autoHideTitle]);
 
-  const uiVisible = !autoHideTitle || activityVisible;
-  const cursorVisible = uiVisible;
+  useEffect(() => {
+    if (!autoHideTitle || controlsVisible !== undefined || !localControlsVisible) return;
+    const timer = setTimeout(() => setLocalControlsVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [autoHideTitle, controlsVisible, localControlsVisible]);
 
-  return <main className={`app-shell${home ? ' home-shell' : ''}${uiVisible ? '' : ' ui-hidden'}${controlsVisible ? '' : ' controls-hidden'}${cursorVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
+  const uiVisible = !autoHideTitle || activityVisible;
+  const buttonsVisible = !autoHideTitle || (controlsVisible ?? localControlsVisible);
+
+  return <main className={`app-shell${home ? ' home-shell' : ''}${uiVisible ? '' : ' ui-hidden'}${buttonsVisible ? '' : ' controls-hidden'}${uiVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
     if (event.target instanceof Element && event.target.closest('button, input, textarea, select, label')) return;
-    onToggle?.();
+    if (onToggle) onToggle();
+    else if (autoHideTitle) setLocalControlsVisible((visible) => !visible);
   }}>
     {children}
   </main>;

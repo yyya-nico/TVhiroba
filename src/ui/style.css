@@ -67,9 +67,9 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
   .settings-row { flex-direction: column; }
 }
 .app-shell.cursor-hidden, .app-shell.cursor-hidden * { cursor: none; }
-.ui-hidden .now-playing, .ui-hidden .home-back { visibility: hidden; opacity: 0; pointer-events: none; }
+.ui-hidden .now-playing { visibility: hidden; opacity: 0; pointer-events: none; }
 
-.controls-hidden .viewer-overlay { visibility: hidden; opacity: 0; pointer-events: none; }
+.controls-hidden .viewer-overlay, .controls-hidden .home-back { visibility: hidden; opacity: 0; pointer-events: none; }
 
 .home-shell { height: auto; min-height: 100svh; overflow: visible; padding: 48px 32px 96px; }
 .home-content { width: min(1100px, 100%); margin: 0 auto; }
