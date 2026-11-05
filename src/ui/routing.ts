@@ -21,10 +21,9 @@ export function setupRedirect(path: AppPath, serverConfigured: boolean, inputCon
   const inSetup = path.startsWith('/setup');
   if (!serverConfigured) return !inSetup || path === '/setup/input' || path === '/setup/links' ? '/setup' : null;
   // Explicit setup steps remain available even when their saved settings exist.
-  if (path === '/setup/connection' || path === '/setup/input') return null;
-  if (!inputConfigured) return '/setup/input';
-  if (path === '/setup/links') return null;
+  if (path === '/setup/connection' || path === '/setup/links' || path === '/setup/input') return null;
   if (!linksConfigured) return '/setup/links';
+  if (!inputConfigured) return '/setup/input';
   return null;
 }
 

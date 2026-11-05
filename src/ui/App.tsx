@@ -106,14 +106,14 @@ export default function App() {
     event.preventDefault(); setBusy(true); setMessage('接続を確認中…');
     try {
       const value = await json<{ mirakcUrl: string; version?: { current?: string } }>('/api/config', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mirakcUrl: address }) });
-      setConfig({ mirakcUrl: value.mirakcUrl }); setAddress(value.mirakcUrl); if (inSetup) navigate(setupUrl('/setup/input', next), true);
+      setConfig({ mirakcUrl: value.mirakcUrl }); setAddress(value.mirakcUrl); if (inSetup) navigate(setupUrl('/setup/links', next), true);
       setMessage(`mirakcに接続しました${value.version?.current ? ` (${value.version.current})` : ''}`); await loadChannels();
     } catch (error) { setMessage(error instanceof Error ? error.message : '接続できませんでした'); }
     finally { setBusy(false); }
   }
 
-  if (!configLoaded || inSetup || !config.mirakcUrl || !inputConfigured || !linksConfigured) return <Setup externalLinks={externalLinks} onLinksComplete={(value) => { setExternalLinks(value); setLinksConfigured(true); navigate(next, true); setMessage(''); }} setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); navigate(setupUrl(view === 'connection' ? '/setup/connection' : '/setup', next)); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
-    setInputDevice(value); setInputConfigured(true); navigate(setupUrl('/setup/links', next), true); setMessage('');
+  if (!configLoaded || inSetup || !config.mirakcUrl || !inputConfigured || !linksConfigured) return <Setup externalLinks={externalLinks} onLinksComplete={(value) => { setExternalLinks(value); setLinksConfigured(true); navigate(setupUrl('/setup/input', next), true); setMessage(''); }} setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); navigate(setupUrl(view === 'connection' ? '/setup/connection' : '/setup', next)); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
+      setInputDevice(value); setInputConfigured(true); navigate(next, true); setMessage('');
   }} />;
 
   if (screen === 'settings') return <Settings externalLinks={externalLinks} onLinksComplete={setExternalLinks} address={address} message={message} busy={busy} inputDevice={inputDevice} onAddressChange={setAddress} onSaveAddress={saveAddress} onClose={() => { navigate('/'); setMessage(''); }} onInputComplete={setInputDevice} />;

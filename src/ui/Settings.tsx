@@ -35,11 +35,11 @@ export default function Settings({ externalLinks, onLinksComplete, address, mess
           {message && <p role="status">{message}</p>}
         </form>
       </section>
-      <section className="settings-section" aria-label="外部入力の設定">
-        <InputSetup initial={inputDevice} onComplete={onInputComplete} mode="settings" />
-      </section>
       <section className="settings-section" aria-label="外部リンクの設定">
         <ExternalLinks initial={externalLinks} onComplete={onLinksComplete} mode="settings" />
+      </section>
+      <section className="settings-section" aria-label="外部入力の設定">
+        <InputSetup initial={inputDevice} onComplete={onInputComplete} mode="settings" />
       </section>
     </div>
   </main>;
