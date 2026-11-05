@@ -33,12 +33,33 @@ export function InputSetup({ initial, onComplete, mode = 'setup' }: { initial: I
   const [videoId, setVideoId] = useState(initial?.videoId ?? '');
   const [audioId, setAudioId] = useState(initial?.audioId ?? '');
   const [allowed, setAllowed] = useState(false);
+  const [audioAllowed, setAudioAllowed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
-    const refresh = () => { void navigator.mediaDevices.enumerateDevices().then((list) => { if (mounted.current) setDevices(list); }).catch(() => {}); };
+    const refresh = () => {
+      void (async () => {
+        try {
+          const list = await navigator.mediaDevices.enumerateDevices();
+          // Permission queries are unavailable in some browsers; exposed video
+          // labels let us recognize existing access without opening the camera.
+          let granted = list.some((device) => device.kind === 'videoinput' && !!device.label);
+          let microphoneGranted = list.some((device) => device.kind === 'audioinput' && !!device.label);
+          try {
+            const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+            granted = permission.state === 'granted';
+          } catch { /* Use the device labels when camera queries are unsupported. */ }
+          try {
+            const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+            microphoneGranted = permission.state === 'granted';
+          } catch { /* Use the device labels when microphone queries are unsupported. */ }
+          if (mounted.current) { setDevices(list); setAllowed(granted); setAudioAllowed(microphoneGranted); }
+        } catch { /* Keep the permission request available when detection fails. */ }
+      })();
+    };
+    refresh();
     navigator.mediaDevices?.addEventListener('devicechange', refresh);
     return () => { mounted.current = false; navigator.mediaDevices?.removeEventListener('devicechange', refresh); };
   }, []);
@@ -49,13 +70,15 @@ export function InputSetup({ initial, onComplete, mode = 'setup' }: { initial: I
       const stream = await media.getUserMedia({ video: true, audio: false });
       stream.getTracks().forEach((track) => track.stop());
       // Audio permission is optional so video-only capture devices also work.
+      let microphoneGranted = false;
       try {
         const audio = await media.getUserMedia({ audio: true });
         audio.getTracks().forEach((track) => track.stop());
+        microphoneGranted = true;
       } catch { if (mounted.current) setMessage('音声の権限がない場合も、映像のみで利用できます。'); }
       const list = await media.enumerateDevices();
       if (!mounted.current) return;
-      setDevices(list); setAllowed(true);
+      setDevices(list); setAllowed(true); setAudioAllowed(microphoneGranted);
       if (!list.some((device) => device.kind === 'videoinput')) setMessage('映像入力が見つかりません。接続を確認してください。');
     } catch (error) { if (mounted.current) setMessage(describe(error)); }
     finally { if (mounted.current) setBusy(false); }
@@ -69,8 +92,8 @@ export function InputSetup({ initial, onComplete, mode = 'setup' }: { initial: I
   return <>
     {mode === 'settings' ? <h2>外部入力</h2> : <h1>外部入力を設定</h1>}
     <p className="setup-lead">UVCキャプチャーデバイスの映像と音声を選びます。</p>
-    <p className="setup-description">ブラウザに表示されるカメラ・マイクへのアクセスを許可してください。{mode === 'settings' ? '映像入力と音声入力を選んで保存してください。' : '外部入力を使わない場合はスキップできます。'}</p>
-    <button type="button" className="setup-primary" disabled={busy} onClick={() => void requestPermission()}>{busy ? '確認中…' : allowed ? 'デバイスを再読み込み' : '権限を要求してデバイスを探す'}</button>
+    <p className="setup-description">{!allowed && 'ブラウザに表示されるカメラ・マイクへのアクセスを許可してください。'}{mode === 'settings' ? '映像入力と音声入力を選んで保存してください。' : '外部入力を使わない場合はスキップできます。'}</p>
+    {allowed ? <p className="input-permission-granted" role="status">{audioAllowed ? 'カメラ・マイクへのアクセスは許可済みです。' : 'カメラへのアクセスは許可済みです。音声は許可済みの場合に選択できます。'}</p> : <button type="button" className="setup-primary" disabled={busy} onClick={() => void requestPermission()}>{busy ? '確認中…' : '権限を要求してデバイスを探す'}</button>}
     {allowed && <div className="input-fields">
       <label htmlFor="input-video">映像入力</label>
       <select id="input-video" value={validVideo ? videoId : ''} onChange={(event) => setVideoId(event.target.value)}><option value="">選択しない</option>{devices.filter((device) => device.kind === 'videoinput' && device.deviceId).map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `映像入力 ${index + 1}`}</option>)}</select>
