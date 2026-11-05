@@ -58,7 +58,7 @@ export default function App() {
 
   if (screen === 'tv') return <TV services={channels.flatMap((channel) => channel.services)} message={message} onMessage={setMessage} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onHome={goHome} onSettings={openSettings} Shell={AppShell} />;
 
-  return <AppShell home={screen === 'home'} onSettings={openSettings}>
+  return <AppShell home={screen === 'home'} autoHideTitle={screen === 'input'} onSettings={openSettings}>
     {screen === 'input' && inputDevice
       ? <Input device={inputDevice} onHome={goHome} />
       : <Home onInput={inputDevice ? () => setScreen('input') : undefined} message={message} busy={busy} onWatch={() => setScreen('tv')} />}
@@ -68,14 +68,36 @@ export default function App() {
 export type AppShellProps = {
   children: ReactNode;
   home?: boolean;
-  uiVisible?: boolean;
+  autoHideTitle?: boolean;
   controlsVisible?: boolean;
-  cursorVisible?: boolean;
   onToggle?: () => void;
   onSettings: () => void;
 };
 
-function AppShell({ children, home = false, uiVisible = true, controlsVisible = true, cursorVisible = true, onToggle, onSettings }: AppShellProps) {
+function AppShell({ children, home = false, autoHideTitle = false, controlsVisible = true, onToggle, onSettings }: AppShellProps) {
+  const [activityVisible, setActivityVisible] = useState(true);
+
+  useEffect(() => {
+    setActivityVisible(true);
+    if (!autoHideTitle) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const showOnMouseMove = (event?: PointerEvent) => {
+      if (event && event.pointerType !== 'mouse') return;
+      setActivityVisible(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setActivityVisible(false), 4000);
+    };
+    showOnMouseMove();
+    window.addEventListener('pointermove', showOnMouseMove, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointermove', showOnMouseMove);
+    };
+  }, [autoHideTitle]);
+
+  const uiVisible = !autoHideTitle || activityVisible;
+  const cursorVisible = uiVisible;
+
   return <main className={`app-shell${home ? ' home-shell' : ''}${uiVisible ? '' : ' ui-hidden'}${controlsVisible ? '' : ' controls-hidden'}${cursorVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
     if (event.target instanceof Element && event.target.closest('button, input, textarea, select, label')) return;
     onToggle?.();

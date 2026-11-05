@@ -22,9 +22,7 @@ type TVProps = {
 
 export default function TV({ services: availableServices, message, onMessage: setMessage, busy, canRefresh, onRefresh, onHome, onSettings, Shell }: TVProps) {
   const [selected, setSelected] = useState<TvService | null>(null);
-  const [uiVisible, setUiVisible] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [cursorVisible, setCursorVisible] = useState(true);
   const playbackStartedRef = useRef(false);
   const [broadcastType, setBroadcastType] = useState('GR');
   const channelListRef = useRef<HTMLDivElement>(null);
@@ -76,49 +74,29 @@ export default function TV({ services: availableServices, message, onMessage: se
   }, [selected]);
 
   useEffect(() => {
-    setUiVisible(true);
-    if (message || !selected) setControlsVisible(true);
-  }, [selected, message]);
-
-  useEffect(() => {
+    if (!selected || message || !controlsVisible) return;
     let timer: ReturnType<typeof setTimeout>;
-    let cursorTimer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
-      if (!selected || message) return;
-      timer = setTimeout(() => {
-        setUiVisible(false);
-        setControlsVisible(false);
-      }, 4000);
+      timer = setTimeout(() => setControlsVisible(false), 4000);
     };
-    const showOnMouseMove = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') return;
-      setCursorVisible(true);
-      clearTimeout(cursorTimer);
-      cursorTimer = setTimeout(() => setCursorVisible(false), 4000);
-      resetTimer();
-    };
-    window.addEventListener('pointermove', showOnMouseMove, { passive: true });
-    const activityEvents = ['keydown', 'wheel', 'focusin'] as const;
+    const activityEvents = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'focusin'] as const;
     activityEvents.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
-    window.addEventListener('pointerdown', resetTimer, { passive: true });
     resetTimer();
     return () => {
       clearTimeout(timer);
-      clearTimeout(cursorTimer);
-      window.removeEventListener('pointermove', showOnMouseMove);
       activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
-      window.removeEventListener('pointerdown', resetTimer);
     };
-  }, [selected, message]);
+  }, [selected, message, controlsVisible]);
 
-  const onBroadcastType = setBroadcastType;
-  const onSelect = (service: TvService) => { setSelected(service); setMessage(`${service.name} に接続中…`); };
   const onPlaying = () => {
     if (playbackStartedRef.current) return;
     playbackStartedRef.current = true;
     setControlsVisible(false);
   };
+
+  const onBroadcastType = setBroadcastType;
+  const onSelect = (service: TvService) => { setSelected(service); setMessage(`${service.name} に接続中…`); };
   const services = availableServices.filter((service) => Boolean(service.currentProgram?.name?.trim()))
     .sort((a, b) => {
       const typeA = a.channelType.toUpperCase();
@@ -134,11 +112,7 @@ export default function TV({ services: availableServices, message, onMessage: se
   const displayedServices = services.filter((service) => service.channelType.toUpperCase() === broadcastType);
   const formatTime = (timestamp: number) => new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 
-  return <Shell uiVisible={uiVisible} controlsVisible={controlsVisible} cursorVisible={cursorVisible} onSettings={onSettings} onToggle={() => {
-    const visible = !(uiVisible && controlsVisible);
-    setUiVisible(visible);
-    setControlsVisible(visible);
-  }}>
+  return <Shell autoHideTitle controlsVisible={controlsVisible} onSettings={onSettings} onToggle={() => setControlsVisible((visible) => !visible)}>
     <div className="player-frame">{selected && <video ref={videoRef} autoPlay playsInline onPlaying={onPlaying} />}</div>
     <header className="now-playing"><div><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></header>
     <button className="home-back" onClick={onHome}>← ホーム</button>
