@@ -4,6 +4,8 @@ import { createServer, get, type Server } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
 import { test } from 'node:test';
 import express from 'express';
+import { createServer as createViteServer } from 'vite';
+import viteConfig from '../vite.config';
 import { streamProxy } from './stream';
 
 async function listen(server: Server) {
@@ -14,8 +16,8 @@ async function listen(server: Server) {
   return `http://127.0.0.1:${address.port}`;
 }
 
-for (const mode of ['pending headers', 'streaming', 'backpressure'] as const) {
-  test(`repeated tuning releases upstream during ${mode}`, { timeout: 15000 }, async () => {
+for (const viaVite of [false, true]) for (const mode of ['pending headers', 'streaming', 'backpressure'] as const) {
+  test(`repeated tuning releases upstream during ${mode} (${viaVite ? 'Vite proxy' : 'direct'})`, { timeout: 15000 }, async () => {
     let active = 0;
     let opened = 0;
     const upstream = createServer((_req, res) => {
@@ -34,6 +36,14 @@ for (const mode of ['pending headers', 'streaming', 'backpressure'] as const) {
     app.get('/stream/:serviceId', streamProxy((_id, signal) => fetch(upstreamUrl, { signal })));
     const proxy = createServer(app);
     const proxyUrl = await listen(proxy);
+    const vite = viaVite ? await createViteServer({
+      configFile: false,
+      server: { host: '127.0.0.1', port: 0, proxy: { '/stream': {
+        ...viteConfig.server!.proxy!['/api'] as object, target: proxyUrl,
+      } } },
+    }) : null;
+    await vite?.listen();
+    const clientUrl = vite ? `http://127.0.0.1:${(vite.httpServer!.address() as { port: number }).port}` : proxyUrl;
     const until = async (condition: () => boolean) => {
       for (let attempt = 0; attempt < 200; attempt++) {
         if (condition()) return;
@@ -43,7 +53,7 @@ for (const mode of ['pending headers', 'streaming', 'backpressure'] as const) {
     };
     try {
       for (let index = 0; index < 15; index++) {
-        const client = get(`${proxyUrl}/stream/${index}`);
+        const client = get(`${clientUrl}/stream/${index}`);
         client.on('error', () => {});
         const response = mode === 'pending headers' ? null : once(client, 'response');
         await until(() => opened === index + 1);
@@ -57,6 +67,7 @@ for (const mode of ['pending headers', 'streaming', 'backpressure'] as const) {
         await until(() => active === 0);
       }
     } finally {
+      await vite?.close();
       proxy.closeAllConnections();
       upstream.closeAllConnections();
       await Promise.all([new Promise<void>((resolve) => proxy.close(() => resolve())), new Promise<void>((resolve) => upstream.close(() => resolve()))]);
