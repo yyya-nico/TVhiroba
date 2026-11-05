@@ -76,7 +76,7 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .home-header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
 .home-header h1 { font-size: 32px; font-weight: 550; }
 .home-header p { font-size: 14px; color: #bbb; }
-.home-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+.home-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .home-tile { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 32px; min-height: 140px; padding: 24px; text-align: left; border: 1px solid #555; border-radius: 8px; background: #202020; }
 .home-tile strong { font-size: 20px; font-weight: 500; }
 .home-tile > span { display: flex; justify-content: space-between; gap: 16px; width: 100%; font-size: 13px; color: #bbb; }
