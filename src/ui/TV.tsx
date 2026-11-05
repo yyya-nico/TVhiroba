@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import type { AppShellProps } from './App';
 import { Mpeg2TsPlayer } from '../../vendor/mpeg2toh264-player/src/index.js';
+import { readTvPreferences, saveTvPreferences } from './tvPreferences';
 
 export type TvProgram = { id?: number; name?: string; description?: string; startAt: number; duration: number };
 export type TvService = { id: number; serviceId: number; networkId?: number; remoteControlKeyId?: number; name: string; type?: number; channelType: string; isSubchannel: boolean; currentProgram: TvProgram | null; nextProgram: TvProgram | null };
@@ -25,7 +26,10 @@ export default function TV({ services: availableServices, message, onMessage: se
   const playbackStartedRef = useRef(false);
   const hideOnPlaybackRef = useRef(false);
   const autoSelectPendingRef = useRef(true);
-  const [broadcastType, setBroadcastType] = useState('GR');
+  const preferencesRef = useRef<ReturnType<typeof readTvPreferences> | null>(null);
+  if (preferencesRef.current === null) preferencesRef.current = readTvPreferences();
+  const preferences = preferencesRef.current;
+  const [broadcastType, setBroadcastType] = useState(preferences.broadcastType);
   const channelListRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Mpeg2TsPlayer | null>(null);
@@ -107,21 +111,32 @@ export default function TV({ services: availableServices, message, onMessage: se
   };
 
   const onBroadcastType = (type: string) => {
-    const firstService = services.find((service) => service.channelType.toUpperCase() === type);
+    const typeServices = services.filter((service) => service.channelType.toUpperCase() === type);
+    const firstService = typeServices.find((service) => service.id === preferences.channels[type]) ?? typeServices[0];
     autoSelectPendingRef.current = !firstService;
     hideOnPlaybackRef.current = false;
     setBroadcastType(type);
+    preferences.broadcastType = type;
+    saveTvPreferences(preferences);
     setControlsVisible(true);
     if (firstService) {
+      rememberChannel(firstService);
       setSelected(firstService);
       setMessage(`${firstService.name} に接続中…`);
     }
   };
   const onSelect = (service: TvService) => {
+    rememberChannel(service);
     autoSelectPendingRef.current = false;
     hideOnPlaybackRef.current = true;
     setSelected(service);
     setMessage(`${service.name} に接続中…`);
+  };
+  const rememberChannel = (service: TvService) => {
+    const type = service.channelType.toUpperCase();
+    preferences.broadcastType = type;
+    preferences.channels[type] = service.id;
+    saveTvPreferences(preferences);
   };
   const services = availableServices.filter((service) => Boolean(service.currentProgram?.name?.trim()))
     .sort((a, b) => {
@@ -141,7 +156,8 @@ export default function TV({ services: availableServices, message, onMessage: se
     if (!autoSelectPendingRef.current || !displayedServices[0]) return;
     autoSelectPendingRef.current = false;
     hideOnPlaybackRef.current = false;
-    const service = displayedServices[0];
+    const service = displayedServices.find((service) => service.id === preferences.channels[broadcastType]) ?? displayedServices[0];
+    rememberChannel(service);
     setSelected(service);
     setControlsVisible(true);
     setMessage(`${service.name} に接続中…`);
