@@ -2,6 +2,7 @@ import express from 'express';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { streamProxy } from './stream';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4174);
@@ -26,12 +27,12 @@ function normalizeUrl(value: unknown): string {
   if (!['http:', 'https:'].includes(url.protocol)) throw new Error('http または https のURLを入力してください');
   return url.toString().replace(/\/$/, '');
 }
-async function upstream(pathname: string, timeoutMs = 15000): Promise<Response> {
+async function upstream(pathname: string, timeoutMs = 15000, signal?: AbortSignal): Promise<Response> {
   const { mirakcUrl } = await readConfig();
   if (!mirakcUrl) throw new Error('先にmirakcのアドレスを設定してください');
   return fetch(`${mirakcUrl}${pathname}`, {
     headers: { accept: '*/*' },
-    ...(timeoutMs > 0 ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
+    signal: timeoutMs > 0 ? (signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs)) : signal,
   });
 }
 function objectOf(value: unknown): JsonObject | null {
@@ -190,29 +191,8 @@ app.get('/api/services', async (_req, res) => {
     res.status(502).json({ error: error instanceof Error ? error.message : 'サービス一覧を取得できませんでした' });
   }
 });
-app.get('/api/stream/:serviceId', async (req, res) => {
-  try {
-    if (!/^\d+$/.test(req.params.serviceId)) return res.status(400).end('Invalid service ID');
-    const response = await upstream(`/api/services/${encodeURIComponent(req.params.serviceId)}/stream`, 0);
-    if (!response.ok || !response.body) return res.status(response.status || 502).end('Stream unavailable');
-    res.status(response.status);
-    res.setHeader('Content-Type', response.headers.get('content-type') ?? 'video/mp2t');
-    res.setHeader('Cache-Control', 'no-store');
-    if (response.headers.has('content-length')) res.setHeader('Content-Length', response.headers.get('content-length')!);
-    const reader = response.body.getReader();
-    res.on('close', () => { void reader.cancel().catch(() => {}); });
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!res.write(value)) await new Promise<void>((resolve) => res.once('drain', resolve));
-    }
-    res.end();
-  } catch (error) {
-    if (res.destroyed) return;
-    if (!res.headersSent) res.status(502).json({ error: error instanceof Error ? error.message : '映像を取得できませんでした' });
-    else res.end();
-  }
-});
+app.get('/api/stream/:serviceId', streamProxy((serviceId, signal) =>
+  upstream(`/api/services/${encodeURIComponent(serviceId)}/stream`, 0, signal)));
 
 const distPath = path.resolve(root, '../dist');
 app.use(express.static(distPath));
