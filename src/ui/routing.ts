@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export const paths = ['/', '/tv', '/input', '/settings', '/setup', '/setup/connection', '/setup/input'] as const;
+export const paths = ['/', '/tv', '/input', '/settings', '/setup', '/setup/connection', '/setup/input', '/setup/links'] as const;
 export type AppPath = typeof paths[number];
 
 export function normalizePath(pathname: string): AppPath {

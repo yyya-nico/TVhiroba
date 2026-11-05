@@ -1,10 +1,14 @@
+import ExternalLinks from './ExternalLinksSetup';
+import type { ExternalLink } from './externalLinks';
 import type { FormEvent } from 'react';
 import { InputSetup, type InputDevice } from './Input';
 
-export type SetupView = 'loading' | 'welcome' | 'connection' | 'input' | 'done';
+export type SetupView = 'loading' | 'welcome' | 'connection' | 'input' | 'links' | 'done';
 
 type SetupProps = {
   setupView: Exclude<SetupView, 'done'>;
+  externalLinks: ExternalLink[];
+  onLinksComplete: (links: ExternalLink[]) => void;
   inputDevice: InputDevice | null;
   address: string;
   message: string;
@@ -15,11 +19,11 @@ type SetupProps = {
   onInputComplete: (value: InputDevice | null) => void;
 };
 
-export default function Setup({ setupView, inputDevice, address, message, busy, onViewChange, onAddressChange, onSaveAddress, onInputComplete }: SetupProps) {
+export default function Setup({ setupView, externalLinks, onLinksComplete, inputDevice, address, message, busy, onViewChange, onAddressChange, onSaveAddress, onInputComplete }: SetupProps) {
   return <main className="setup-shell">
     {setupView === 'loading' ? <div className="setup-loading" role="status">設定を読み込んでいます…</div> : <section className="setup-content">
       <div className="setup-copy">
-        {setupView === 'input' ? <InputSetup initial={inputDevice} onComplete={(value) => {
+        {setupView === 'links' ? <ExternalLinks initial={externalLinks} onComplete={onLinksComplete} /> : setupView === 'input' ? <InputSetup initial={inputDevice} onComplete={(value) => {
           onInputComplete(value);
         }} /> : setupView === 'welcome' ? <>
           <h1>TVhirobaへようこそ</h1>

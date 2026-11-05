@@ -1,7 +1,11 @@
+import ExternalLinks from './ExternalLinksSetup';
+import type { ExternalLink } from './externalLinks';
 import type { FormEvent } from 'react';
 import { InputSetup, type InputDevice } from './Input';
 
 type SettingsProps = {
+  externalLinks: ExternalLink[];
+  onLinksComplete: (links: ExternalLink[]) => void;
   address: string;
   message: string;
   busy: boolean;
@@ -12,7 +16,7 @@ type SettingsProps = {
   onInputComplete: (value: InputDevice | null) => void;
 };
 
-export default function Settings({ address, message, busy, inputDevice, onAddressChange, onSaveAddress, onClose, onInputComplete }: SettingsProps) {
+export default function Settings({ externalLinks, onLinksComplete, address, message, busy, inputDevice, onAddressChange, onSaveAddress, onClose, onInputComplete }: SettingsProps) {
   return <main className="settings-shell">
     <div className="settings-content">
       <header className="settings-header">
@@ -33,6 +37,9 @@ export default function Settings({ address, message, busy, inputDevice, onAddres
       </section>
       <section className="settings-section" aria-label="外部入力の設定">
         <InputSetup initial={inputDevice} onComplete={onInputComplete} mode="settings" />
+      </section>
+      <section className="settings-section" aria-label="外部リンクの設定">
+        <ExternalLinks initial={externalLinks} onComplete={onLinksComplete} mode="settings" />
       </section>
     </div>
   </main>;

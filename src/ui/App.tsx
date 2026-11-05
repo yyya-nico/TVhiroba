@@ -1,3 +1,4 @@
+import { readExternalLinks, type ExternalLink } from './externalLinks';
 import { useAutoHideControls } from './useAutoHideControls';
 import { useEffect, useState, type ReactNode } from 'react';
 import Home from './Home';
@@ -19,6 +20,8 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function App() {
+  const [externalLinks, setExternalLinks] = useState<ExternalLink[]>(() => readExternalLinks() ?? []);
+  const [linksConfigured, setLinksConfigured] = useState(() => readExternalLinks() !== undefined);
   const [inputDevice, setInputDevice] = useState<InputDevice | null>(() => readInputDevice() ?? null);
   const [config, setConfig] = useState<Config>({ mirakcUrl: '' });
   const [address, setAddress] = useState('http://localhost:40772');
@@ -31,21 +34,23 @@ export default function App() {
   const next = inSetup ? setupDestination(search) : path;
   const [message, setMessage] = useState('接続先を設定してください');
   const [busy, setBusy] = useState(false);
-  const setupView: SetupView = !configLoaded ? 'loading' : path === '/setup/input' ? 'input' : path === '/setup/connection' ? 'connection' : 'welcome';
+  const setupView: SetupView = !configLoaded ? 'loading' : path === '/setup/links' ? 'links' : path === '/setup/input' ? 'input' : path === '/setup/connection' ? 'connection' : 'welcome';
 
   useEffect(() => {
     if (!configLoaded) return;
     if (pathname !== path) { navigate(path, true); return; }
     if (!config.mirakcUrl) {
-      if (!inSetup || path === '/setup/input') navigate(setupUrl('/setup', next), true);
+      if (!inSetup || path === '/setup/input' || path === '/setup/links') navigate(setupUrl('/setup', next), true);
     } else if (!inputConfigured) {
       if (path !== '/setup/input') navigate(setupUrl('/setup/input', next), true);
+    } else if (!linksConfigured) {
+      if (path !== '/setup/links') navigate(setupUrl('/setup/links', next), true);
     } else if (inSetup) {
       navigate(next, true);
     } else if (path === '/input' && !inputDevice) {
       navigate('/settings', true);
     }
-  }, [configLoaded, config.mirakcUrl, inputConfigured, inputDevice, path, pathname, search]);
+  }, [configLoaded, config.mirakcUrl, inputConfigured, linksConfigured, inputDevice, path, pathname, search]);
 
   useEffect(() => { void json<Config>('/api/config').then((value) => { setConfig(value); if (value.mirakcUrl) { setAddress(value.mirakcUrl); void loadChannels(); } }).catch((e) => { setMessage(e.message); }).finally(() => setConfigLoaded(true)); }, []);
   async function loadChannels() {
@@ -68,11 +73,11 @@ export default function App() {
     finally { setBusy(false); }
   }
 
-  if (!configLoaded || inSetup || !config.mirakcUrl || !inputConfigured) return <Setup setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); navigate(setupUrl(view === 'connection' ? '/setup/connection' : '/setup', next)); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
-    setInputDevice(value); setInputConfigured(true); navigate(next, true); setMessage('');
+  if (!configLoaded || inSetup || !config.mirakcUrl || !inputConfigured || !linksConfigured) return <Setup externalLinks={externalLinks} onLinksComplete={(value) => { setExternalLinks(value); setLinksConfigured(true); navigate(next, true); setMessage(''); }} setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); navigate(setupUrl(view === 'connection' ? '/setup/connection' : '/setup', next)); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
+    setInputDevice(value); setInputConfigured(true); navigate(setupUrl('/setup/links', next), true); setMessage('');
   }} />;
 
-  if (screen === 'settings') return <Settings address={address} message={message} busy={busy} inputDevice={inputDevice} onAddressChange={setAddress} onSaveAddress={saveAddress} onClose={() => { navigate('/'); setMessage(''); }} onInputComplete={setInputDevice} />;
+  if (screen === 'settings') return <Settings externalLinks={externalLinks} onLinksComplete={setExternalLinks} address={address} message={message} busy={busy} inputDevice={inputDevice} onAddressChange={setAddress} onSaveAddress={saveAddress} onClose={() => { navigate('/'); setMessage(''); }} onInputComplete={setInputDevice} />;
 
   const openSettings = () => { setMessage(''); navigate('/settings'); };
   const goHome = () => { navigate('/'); setMessage(''); };
@@ -82,7 +87,7 @@ export default function App() {
   return <AppShell home={screen === 'home'} autoHideTitle={screen === 'input'}>
     {screen === 'input' && inputDevice
       ? <Input device={inputDevice} onHome={goHome} />
-      : <Home onSettings={openSettings} onInput={inputDevice ? () => navigate('/input') : undefined} message={message} busy={busy} onWatch={() => navigate('/tv')} />}
+      : <Home sites={externalLinks} onSettings={openSettings} onInput={inputDevice ? () => navigate('/input') : undefined} message={message} busy={busy} onWatch={() => navigate('/tv')} />}
   </AppShell>;
 }
 

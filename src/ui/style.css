@@ -1,10 +1,10 @@
 * { box-sizing: border-box; }
 :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #f1f1f1; background: #141414; font-synthesis: none; color-scheme: dark; }
 body { margin: 0; min-width: 320px; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { color: inherit; cursor: pointer; }
 button:disabled { opacity: .5; cursor: wait; }
-button:focus-visible, input:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 h1, h2, p { margin: 0; }
 .app-shell { position: relative; height: 100svh; min-height: 0; overflow: hidden; background: #141414; }
 .player-frame { position: absolute; inset: 0; }
@@ -109,3 +109,15 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 
 .remote-control-key { flex-shrink: 0; min-width: 2ch; font-size: 24px; font-weight: 700; text-align: center; }
 .service-name-line > strong { flex: 1; }
+
+.external-links-form { display: grid; gap: 20px; }
+.setup-secondary { min-height: 48px; padding: 12px 18px; border: 1px solid #666; border-radius: 6px; background: transparent; }
+.external-link-fields { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 16px; border: 1px solid #666; border-radius: 6px; }
+.external-link-fields input { width: 100%; min-width: 0; }
+.external-link-fields legend { padding: 0 8px; }
+.external-link-fields label { font-size: 14px; }
+.external-link-target { display: flex; align-items: center; gap: 8px; min-height: 48px; }
+.external-link-target input { width: auto; height: auto; margin: 0; flex-shrink: 0; }
+.external-links-form button { justify-self: start; }
+a.home-tile { color: inherit; text-decoration: none; overflow-wrap: anywhere; }
+a.home-tile:focus-visible { outline: 2px solid; outline-offset: 4px; }
