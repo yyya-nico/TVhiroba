@@ -37,7 +37,7 @@ export function useRoute() {
   }, []);
   function navigate(url: string, replace = false) {
     if (`${window.location.pathname}${window.location.search}` === url) return;
-    window.history[replace ? 'replaceState' : 'pushState'](null, '', url);
+    window.history[replace ? 'replaceState' : 'pushState']({ tvhiroba: true }, '', url);
     setLocation({ pathname: window.location.pathname, search: window.location.search });
   }
   return { ...location, path: normalizePath(location.pathname), navigate };

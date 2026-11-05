@@ -37,6 +37,43 @@ export default function App() {
   const setupView: SetupView = !configLoaded ? 'loading' : path === '/setup/links' ? 'links' : path === '/setup/input' ? 'input' : path === '/setup/connection' ? 'connection' : 'welcome';
 
   useEffect(() => {
+    const onRemoteKeys = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
+      if (event.key === 'Escape') {
+        if (pathname === '/') return;
+        event.preventDefault();
+        if (window.history.state?.tvhiroba) window.history.back();
+        else navigate('/');
+        return;
+      }
+      if (!event.key.startsWith('Arrow')) return;
+      const focusable = Array.from(document.querySelectorAll<HTMLElement>('a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'))
+        .filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
+      if (!focusable.length) return;
+      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const origin = active && focusable.includes(active) ? active : null;
+      const direction = event.key.slice(5).toLowerCase();
+      const originRect = origin?.getBoundingClientRect();
+      const candidates = focusable.filter((element) => element !== origin).map((element) => {
+        const rect = element.getBoundingClientRect();
+        const dx = rect.left + rect.width / 2 - (originRect ? originRect.left + originRect.width / 2 : innerWidth / 2);
+        const dy = rect.top + rect.height / 2 - (originRect ? originRect.top + originRect.height / 2 : innerHeight / 2);
+        const primary = direction === 'left' ? -dx : direction === 'right' ? dx : direction === 'up' ? -dy : dy;
+        const secondary = direction === 'left' || direction === 'right' ? Math.abs(dy) : Math.abs(dx);
+        return { element, rect, primary, secondary };
+      }).filter(({ primary }) => primary > 1).sort((a, b) => (a.secondary * 2 + a.primary) - (b.secondary * 2 + b.primary));
+      const next = candidates[0]?.element;
+      if (!next) return;
+      event.preventDefault();
+      next.focus();
+    };
+    window.addEventListener('keydown', onRemoteKeys);
+    return () => window.removeEventListener('keydown', onRemoteKeys);
+  }, [pathname]);
+
+  useEffect(() => {
     if (!configLoaded) return;
     if (pathname !== path) { navigate(path, true); return; }
     const redirect = setupRedirect(path, Boolean(config.mirakcUrl), inputConfigured, linksConfigured);

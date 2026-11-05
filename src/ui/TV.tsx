@@ -36,7 +36,7 @@ export default function TV({ services: availableServices, message, onMessage: se
   const playerRef = useRef<Mpeg2TsPlayer | null>(null);
 
   useEffect(() => {
-    const focusAdjacentChannel = (event: KeyboardEvent) => {
+    const selectChannelByRemoteKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
       const buttons = Array.from(channelListRef.current?.querySelectorAll<HTMLButtonElement>('button.program-service') ?? []);
@@ -50,26 +50,31 @@ export default function TV({ services: availableServices, message, onMessage: se
         if (!event.repeat) button.click();
         return;
       }
-      if (event.key === 'PageUp' || event.key === 'PageDown') {
-        if (buttons.length === 0) return;
-        event.preventDefault();
-        if (event.repeat) return;
-        const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
-        const nextIndex = selectedIndex < 0 ? (event.key === 'PageUp' ? 0 : buttons.length - 1)
-          : (selectedIndex + (event.key === 'PageUp' ? 1 : -1) + buttons.length) % buttons.length;
-        buttons[nextIndex]?.click();
-        return;
-      }
-      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-      if (buttons.length === 0) return;
-      const index = buttons.findIndex((button) => button === document.activeElement);
-      const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
-      const nextIndex = index < 0 ? Math.max(0, selectedIndex) : index + (event.key === 'ArrowRight' ? 1 : -1);
+      if (event.key !== 'PageUp' && event.key !== 'PageDown') return;
+      if (!buttons.length) return;
       event.preventDefault();
-      buttons[nextIndex]?.focus();
+      if (event.repeat) return;
+      const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+      const nextIndex = selectedIndex < 0 ? (event.key === 'PageUp' ? 0 : buttons.length - 1)
+        : (selectedIndex + (event.key === 'PageUp' ? 1 : -1) + buttons.length) % buttons.length;
+      buttons[nextIndex]?.click();
     };
-    window.addEventListener('keydown', focusAdjacentChannel);
-    return () => window.removeEventListener('keydown', focusAdjacentChannel);
+    window.addEventListener('keydown', selectChannelByRemoteKey);
+    return () => window.removeEventListener('keydown', selectChannelByRemoteKey);
+  }, []);
+
+  useEffect(() => {
+    const cycleBroadcastType = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.repeat || event.key.toLowerCase() !== 'b') return;
+      if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
+      const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.broadcast-types button'));
+      if (!buttons.length) return;
+      event.preventDefault();
+      const selectedIndex = buttons.findIndex((button) => button.getAttribute('aria-pressed') === 'true');
+      buttons[(selectedIndex + 1) % buttons.length]?.click();
+    };
+    window.addEventListener('keydown', cycleBroadcastType);
+    return () => window.removeEventListener('keydown', cycleBroadcastType);
   }, []);
 
   useEffect(() => {
@@ -166,7 +171,7 @@ export default function TV({ services: availableServices, message, onMessage: se
     <section className="viewer-overlay" aria-label="テレビの選局">
       <div className="list-heading"><h2>チャンネル <span>{services.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={onRefresh} disabled={!canRefresh || busy} aria-label="一覧を更新">↻</button></div></div>
       <div className="broadcast-types" role="group" aria-label="放送種別">{broadcastTypes.map((type) => <button key={type} type="button" aria-pressed={broadcastType === type} onClick={() => { onBroadcastType(type); channelListRef.current?.scrollTo({ top: 0 }); }}>{broadcastLabels[type] ?? type}</button>)}</div>
-      {busy && services.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} data-remote-key={service.remoteControlKeyId} data-subchannel={service.isSubchannel} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => onSelect(service)}>
+      {busy && services.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => onSelect(service)}>
           <span className="service-name-line">{service.remoteControlKeyId != null && <span className="remote-control-key" aria-label={`リモコン番号 ${service.remoteControlKeyId}`}>{service.remoteControlKeyId}</span>}<strong>{service.name}</strong><span className="service-id">{selected?.id === service.id ? '視聴中' : service.channelType}</span></span>
           <span className="current-program"><strong>{service.currentProgram?.name ?? '番組情報なし'}</strong>
             {service.currentProgram && <span className="program-time">{formatTime(service.currentProgram.startAt)} – {formatTime(service.currentProgram.startAt + service.currentProgram.duration)}</span>}
