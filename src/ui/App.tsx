@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Home from './Home';
 import TV from './TV';
-import Input, { InputSetup, readInputDevice, type InputDevice } from './Input';
+import Input, { readInputDevice, type InputDevice } from './Input';
+import Setup, { type SetupView } from './Setup';
+import Settings from './Settings';
 import { Mpeg2TsPlayer } from '../../vendor/mpeg2toh264-player/src/index.js';
 
 export type TvProgram = { id?: number; name?: string; description?: string; startAt: number; duration: number };
@@ -9,7 +11,6 @@ export type TvService = { id: number; serviceId: number; networkId?: number; rem
 type TvChannel = { type: string; channel: string; name: string; services: TvService[] };
 type ChannelResponse = { channels: TvChannel[]; programGuideAvailable: boolean; serviceCount: number; servicesWithGuide: number; generatedAt: number };
 type Config = { mirakcUrl: string };
-type SetupView = 'loading' | 'welcome' | 'connection' | 'input' | 'done';
 const channelTypeOrder: Record<string, number> = { GR: 0, BS: 1, CS: 2, SKY: 3, BS4K: 4 };
 const hasCurrentProgram = (service: TvService) => Boolean(service.currentProgram?.name?.trim());
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
@@ -24,11 +25,10 @@ export default function App() {
   const [config, setConfig] = useState<Config>({ mirakcUrl: '' });
   const [address, setAddress] = useState('http://localhost:40772');
   const [channels, setChannels] = useState<TvChannel[]>([]);
-  const [screen, setScreen] = useState<'home' | 'tv' | 'input'>('home');
+  const [screen, setScreen] = useState<'home' | 'tv' | 'input' | 'settings'>('home');
   const [selected, setSelected] = useState<TvService | null>(null);
   const [message, setMessage] = useState('接続先を設定してください');
   const [busy, setBusy] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [uiVisible, setUiVisible] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [cursorVisible, setCursorVisible] = useState(true);
@@ -86,8 +86,8 @@ export default function App() {
 
   useEffect(() => {
     setUiVisible(true);
-    if (message || !selected || settingsOpen) setControlsVisible(true);
-  }, [setupView, screen, selected, settingsOpen, message]);
+    if (message || !selected || screen === 'settings') setControlsVisible(true);
+  }, [setupView, screen, selected, message]);
 
   useEffect(() => {
     if (setupView !== 'done' || screen !== 'tv') return;
@@ -95,7 +95,7 @@ export default function App() {
     let cursorTimer: ReturnType<typeof setTimeout>;
     const resetTimer = () => {
       clearTimeout(timer);
-      if (!selected || settingsOpen || message) return;
+      if (!selected || message) return;
       timer = setTimeout(() => {
         setUiVisible(false);
         setControlsVisible(false);
@@ -120,7 +120,7 @@ export default function App() {
       activityEvents.forEach((event) => window.removeEventListener(event, resetTimer));
       window.removeEventListener('pointerdown', resetTimer);
     };
-  }, [setupView, screen, selected, settingsOpen, message]);
+  }, [setupView, screen, selected, message]);
 
   async function loadChannels() {
     setBusy(true); setMessage('チャンネルと番組情報を取得中…');
@@ -136,7 +136,7 @@ export default function App() {
     event.preventDefault(); setBusy(true); setMessage('接続を確認中…');
     try {
       const value = await json<{ mirakcUrl: string; version?: { current?: string } }>('/api/config', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ mirakcUrl: address }) });
-      setConfig({ mirakcUrl: value.mirakcUrl }); setAddress(value.mirakcUrl); setSettingsOpen(false); setSetupView(setupView === 'connection' ? 'input' : 'done');
+      setConfig({ mirakcUrl: value.mirakcUrl }); setAddress(value.mirakcUrl); setSetupView(setupView === 'connection' ? 'input' : 'done');
       setMessage(`mirakcに接続しました${value.version?.current ? ` (${value.version.current})` : ''}`); await loadChannels();
     } catch (error) { setMessage(error instanceof Error ? error.message : '接続できませんでした'); }
     finally { setBusy(false); }
@@ -151,31 +151,11 @@ export default function App() {
       return (a.remoteControlKeyId ?? Infinity) - (b.remoteControlKeyId ?? Infinity);
     });
 
-  if (setupView !== 'done') return <main className="setup-shell">
-    {setupView === 'loading' ? <div className="setup-loading" role="status">設定を読み込んでいます…</div> : <section className="setup-content">
-      <div className="setup-copy">
-        {setupView === 'input' ? <InputSetup initial={inputDevice} onComplete={(value) => {
-          setInputDevice(value); setSetupView('done'); setMessage('');
-        }} /> : setupView === 'welcome' ? <>
-          <h1>TVhirobaへようこそ</h1>
-          <p className="setup-lead">いつものテレビ環境につないで、ブラウザから視聴を始めましょう。</p>
-          <p className="setup-description">まずはMirakurun / mirakcのアドレスを登録します。接続先はあとから設定で変更できます。</p>
-          <button className="setup-primary" onClick={() => { setMessage(''); setSetupView('connection'); }}>セットアップを始める <span aria-hidden="true">→</span></button>
-        </> : <>
-          <button className="setup-back" type="button" onClick={() => { setMessage(''); setSetupView('welcome'); }}>← はじめに戻る</button>
-          <h1>テレビサーバーに接続</h1>
-          <p className="setup-lead">Mirakurunまたはmirakcのアドレスを入力してください。</p>
-          <form className="setup-form" onSubmit={saveAddress}>
-            <label htmlFor="setup-mirakc-url">サーバーアドレス</label>
-            <input id="setup-mirakc-url" type="url" placeholder="http://192.168.1.10:40772" value={address} onChange={(e) => setAddress(e.target.value)} required autoFocus />
-            <p>例: http://mirakc-host:40772</p>
-            {message && <div className="setup-message" role="status">{message}</div>}
-            <button className="setup-primary" disabled={busy}>{busy ? '接続を確認中…' : '接続して次へ'} <span aria-hidden="true">→</span></button>
-          </form>
-        </>}
-      </div>
-    </section>}
-  </main>;
+  if (setupView !== 'done') return <Setup setupView={setupView} inputDevice={inputDevice} address={address} message={message} busy={busy} onViewChange={(view) => { setMessage(''); setSetupView(view); }} onAddressChange={setAddress} onSaveAddress={saveAddress} onInputComplete={(value) => {
+    setInputDevice(value); setSetupView('done'); setMessage('');
+  }} />;
+
+  if (screen === 'settings') return <Settings address={address} message={message} busy={busy} inputDevice={inputDevice} onAddressChange={setAddress} onSaveAddress={saveAddress} onClose={() => { setScreen('home'); setMessage(''); setCursorVisible(true); }} onInputComplete={setInputDevice} />;
 
   return <main className={`app-shell${screen === 'home' ? ' home-shell' : ''}${uiVisible ? '' : ' ui-hidden'}${controlsVisible ? '' : ' controls-hidden'}${cursorVisible ? '' : ' cursor-hidden'}`} onClick={(event) => {
     if (screen === 'home') return;
@@ -184,8 +164,8 @@ export default function App() {
     setUiVisible(visible);
     setControlsVisible(visible);
   }}>
-    <div className="viewer-actions"><button className="icon-button" onClick={() => setSettingsOpen(!settingsOpen)} aria-label="接続設定" aria-expanded={settingsOpen}>⚙</button></div>
-    {settingsOpen && <form className="settings-panel" onSubmit={saveAddress}><div className="settings-title"><label htmlFor="mirakc-url">テレビサーバーの接続設定</label><button type="button" className="icon-button" onClick={() => setSettingsOpen(false)} aria-label="設定を閉じる">×</button></div><div className="settings-row"><input id="mirakc-url" type="url" placeholder="http://192.168.1.10:40772" value={address} onChange={(e) => setAddress(e.target.value)} required /><button disabled={busy}>{busy ? '確認中…' : '接続して保存'}</button></div><p>Mirakurun / mirakc のサーバーアドレス</p>{message && <p role="status">{message}</p>}<button type="button" className="setup-back" onClick={() => { setSelected(null); setScreen('home'); setSettingsOpen(false); setSetupView('input'); }}>外部入力の設定</button></form>}
+    <div className="viewer-actions"><button className="icon-button" onClick={() => { setSelected(null); setMessage(''); setScreen('settings'); }} aria-label="設定">⚙</button></div>
+
     {screen === 'home' ? <Home onInput={inputDevice ? () => { setScreen('input'); setUiVisible(true); setControlsVisible(true); setCursorVisible(true); } : undefined} message={message} busy={busy} onWatch={() => { setScreen('tv'); setUiVisible(true); setControlsVisible(true); setCursorVisible(true); }} /> : screen === 'input' && inputDevice ? <Input device={inputDevice} onHome={() => { setScreen('home'); setMessage(''); }} /> : <TV selected={selected} services={visibleServices} broadcastType={broadcastType} onBroadcastType={setBroadcastType} message={message} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onSelect={(service) => { setSelected(service); setMessage(`${service.name} に接続中…`); }} onHome={() => { setSelected(null); setScreen('home'); setMessage(''); setUiVisible(true); setControlsVisible(true); setCursorVisible(true); }} videoRef={videoRef} channelListRef={channelListRef} onPlaying={() => {
       if (playbackStartedRef.current) return;
       playbackStartedRef.current = true;

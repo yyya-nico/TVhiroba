@@ -28,7 +28,7 @@ function mediaDevices() {
   return navigator.mediaDevices;
 }
 
-export function InputSetup({ initial, onComplete }: { initial: InputDevice | null; onComplete: (value: InputDevice | null) => void }) {
+export function InputSetup({ initial, onComplete, mode = 'setup' }: { initial: InputDevice | null; onComplete: (value: InputDevice | null) => void; mode?: 'setup' | 'settings' }) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [videoId, setVideoId] = useState(initial?.videoId ?? '');
   const [audioId, setAudioId] = useState(initial?.audioId ?? '');
@@ -61,25 +61,25 @@ export function InputSetup({ initial, onComplete }: { initial: InputDevice | nul
     finally { if (mounted.current) setBusy(false); }
   }
   function complete(value: InputDevice | null) {
-    try { saveInputDevice(value); onComplete(value); }
+    try { saveInputDevice(value); onComplete(value); if (mode === 'settings') setMessage(value ? '外部入力の設定を保存しました。' : '外部入力を無効にしました。'); }
     catch { setMessage('設定を保存できませんでした。ブラウザのストレージ設定を確認してください。'); }
   }
   const validVideo = devices.some((device) => device.kind === 'videoinput' && device.deviceId === videoId);
   const validAudio = !audioId || devices.some((device) => device.kind === 'audioinput' && device.deviceId === audioId);
   return <>
-    <h1>外部入力を設定</h1>
+    {mode === 'settings' ? <h2>外部入力</h2> : <h1>外部入力を設定</h1>}
     <p className="setup-lead">UVCキャプチャーデバイスの映像と音声を選びます。</p>
-    <p className="setup-description">ブラウザに表示されるカメラ・マイクへのアクセスを許可してください。外部入力を使わない場合はスキップできます。</p>
+    <p className="setup-description">ブラウザに表示されるカメラ・マイクへのアクセスを許可してください。{mode === 'settings' ? '映像入力と音声入力を選んで保存してください。' : '外部入力を使わない場合はスキップできます。'}</p>
     <button type="button" className="setup-primary" disabled={busy} onClick={() => void requestPermission()}>{busy ? '確認中…' : allowed ? 'デバイスを再読み込み' : '権限を要求してデバイスを探す'}</button>
     {allowed && <div className="input-fields">
       <label htmlFor="input-video">映像入力</label>
       <select id="input-video" value={validVideo ? videoId : ''} onChange={(event) => setVideoId(event.target.value)}><option value="">選択しない</option>{devices.filter((device) => device.kind === 'videoinput' && device.deviceId).map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `映像入力 ${index + 1}`}</option>)}</select>
       <label htmlFor="input-audio">音声入力</label>
       <select id="input-audio" value={validAudio ? audioId : ''} onChange={(event) => setAudioId(event.target.value)}><option value="">音声なし</option>{devices.filter((device) => device.kind === 'audioinput' && device.deviceId && device.label).map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `音声入力 ${index + 1}`}</option>)}</select>
-      <button type="button" className="setup-primary" disabled={busy || !validVideo || !validAudio} onClick={() => complete({ videoId, audioId })}>保存して完了</button>
+      <button type="button" className="setup-primary" disabled={busy || !validVideo || !validAudio} onClick={() => complete({ videoId, audioId })}>{mode === 'settings' ? '外部入力を保存' : '保存して完了'}</button>
     </div>}
     {message && <p className="setup-message" role="status">{message}</p>}
-    <button type="button" className="setup-back" onClick={() => complete(null)}>外部入力を使わずに完了</button>
+    <button type="button" className="setup-back" onClick={() => complete(null)}>{mode === 'settings' ? '外部入力を無効にする' : '外部入力を使わずに完了'}</button>
   </>;
 }
 

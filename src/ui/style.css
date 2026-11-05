@@ -37,13 +37,9 @@ h1, h2, p { margin: 0; }
 .next-program { display: flex; gap: 10px; padding-top: 12px; border-top: 1px solid #484848; color: #bbb; font-size: 11px; }
 .next-program > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty-state { padding: 24px 0; color: #bbb; font-size: 13px; }
-.settings-panel { position: absolute; z-index: 2; bottom: 76px; right: 32px; width: min(540px, calc(100% - 40px)); padding: 24px; background: #202020; border: 1px solid #555; border-radius: 8px; }
-.settings-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
-.settings-title label { font-size: 14px; }
 .settings-row { display: flex; gap: 10px; }
 .settings-row input { flex: 1; min-width: 0; }
 .settings-row button, .setup-primary { border: 0; border-radius: 6px; padding: 12px 18px; background: #eee; color: #181818; font-weight: 600; }
-.settings-panel p { color: #bbb; font-size: 12px; margin-top: 12px; overflow-wrap: anywhere; }
 input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6px; background: transparent; color: inherit; }
 .setup-shell { min-height: 100svh; display: grid; place-items: center; padding: 48px 24px; }
 .setup-content { width: min(560px, 100%); }
@@ -69,7 +65,6 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
   .current-program strong { font-size: 12px; }
   .program-time { font-size: 10px; }
   .next-program { gap: 4px; }
-  .settings-panel { right: 16px; bottom: 66px; padding: 18px; }
   .settings-row { flex-direction: column; }
 }
 .app-shell.cursor-hidden, .app-shell.cursor-hidden * { cursor: none; }
@@ -90,7 +85,6 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .home-tile:disabled { cursor: default; opacity: .5; }
 .home-status { margin-top: 12px; font-size: 12px; color: #bbb; overflow-wrap: anywhere; }
 .home-shell .viewer-actions { position: fixed; }
-.home-shell .settings-panel { position: fixed; }
 .home-back { position: absolute; z-index: 1; bottom: 24px; left: 32px; min-height: 38px; border: 1px solid #555; border-radius: 19px; background: rgb(20 20 20 / 85%); padding: 8px 16px; font-size: 13px; }
 .home-back:hover { background: #383838; }
 @media (max-width: 620px) {
@@ -101,3 +95,16 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
   .home-tile { min-height: 120px; padding: 16px; gap: 24px; }
   .home-tile strong { font-size: 18px; }
 }
+
+.settings-shell { min-height: 100svh; padding: 40px 24px 64px; }
+.settings-content { width: min(800px, 100%); margin: 0 auto; }
+.settings-header { display: grid; gap: 24px; margin-bottom: 40px; }
+.settings-header .setup-back { margin: 0; justify-self: start; }
+.settings-section { margin-top: 40px; }
+.settings-section h2 { margin-bottom: 16px; }
+.settings-section .setup-form { margin-top: 24px; }
+.settings-section .setup-description { margin-bottom: 24px; }
+.settings-section .input-fields { display: grid; gap: 12px; margin-top: 24px; }
+.settings-section .input-fields select { width: 100%; min-width: 0; min-height: 48px; font: inherit; }
+.settings-section .input-fields button { justify-self: start; margin-top: 12px; }
+.settings-section .setup-message { margin-top: 20px; }
