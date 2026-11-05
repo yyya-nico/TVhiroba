@@ -125,7 +125,7 @@ export default function TV({ services: availableServices, message, onMessage: se
         : event.key === 'F11' ? 11 : event.key === 'F12' ? 12 : null;
       const isChannelStep = event.key === 'PageUp' || event.key === 'PageDown';
       const isBroadcastCycle = event.key.toLowerCase() === 'b';
-      if (remoteKey === null && (isChannelStep || isBroadcastCycle || event.key.startsWith('Arrow'))) {
+      if (remoteKey === null && (isBroadcastCycle || event.key.startsWith('Arrow'))) {
         setControlsVisible(true);
       }
 
