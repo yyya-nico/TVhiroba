@@ -6,7 +6,7 @@ import TV, { type TvService } from './TV';
 import Input, { readInputDevice, type InputDevice } from './Input';
 import Setup, { type SetupView } from './Setup';
 import Settings from './Settings';
-import { setupDestination, setupUrl, useRoute } from './routing';
+import { setupDestination, setupRedirect, setupUrl, useRoute } from './routing';
 
 type TvChannel = { type: string; channel: string; name: string; services: TvService[] };
 type ChannelResponse = { channels: TvChannel[]; programGuideAvailable: boolean; serviceCount: number; servicesWithGuide: number; generatedAt: number };
@@ -39,13 +39,10 @@ export default function App() {
   useEffect(() => {
     if (!configLoaded) return;
     if (pathname !== path) { navigate(path, true); return; }
-    if (!config.mirakcUrl) {
-      if (!inSetup || path === '/setup/input' || path === '/setup/links') navigate(setupUrl('/setup', next), true);
-    } else if (!inputConfigured) {
-      if (path !== '/setup/input') navigate(setupUrl('/setup/input', next), true);
-    } else if (!linksConfigured) {
-      if (path !== '/setup/links') navigate(setupUrl('/setup/links', next), true);
-    } else if (inSetup) {
+    const redirect = setupRedirect(path, Boolean(config.mirakcUrl), inputConfigured, linksConfigured);
+    if (redirect) {
+      if (path !== redirect) navigate(setupUrl(redirect, next), true);
+    } else if (inSetup && path === '/setup' && config.mirakcUrl && inputConfigured && linksConfigured) {
       navigate(next, true);
     } else if (path === '/input' && !inputDevice) {
       navigate('/settings', true);

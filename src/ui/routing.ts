@@ -17,6 +17,17 @@ export function setupUrl(path: AppPath, next: AppPath): string {
   return next === '/' ? path : `${path}?next=${encodeURIComponent(next)}`;
 }
 
+export function setupRedirect(path: AppPath, serverConfigured: boolean, inputConfigured: boolean, linksConfigured: boolean): AppPath | null {
+  const inSetup = path.startsWith('/setup');
+  if (!serverConfigured) return !inSetup || path === '/setup/input' || path === '/setup/links' ? '/setup' : null;
+  // Explicit setup steps remain available even when their saved settings exist.
+  if (path === '/setup/connection' || path === '/setup/input') return null;
+  if (!inputConfigured) return '/setup/input';
+  if (path === '/setup/links') return null;
+  if (!linksConfigured) return '/setup/links';
+  return null;
+}
+
 export function useRoute() {
   const [location, setLocation] = useState(() => ({ pathname: window.location.pathname, search: window.location.search }));
   useEffect(() => {

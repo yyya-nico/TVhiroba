@@ -46,6 +46,10 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .setup-lead { font-size: 16px; line-height: 1.9; margin-bottom: 16px; }
 .setup-description { color: #aaa; font-size: 14px; line-height: 1.9; margin-bottom: 36px; }
 .input-permission-granted { color: #65b881; font-size: 14px; line-height: 1.9; }
+.input-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 24px 0; }
+.input-fields label { font-size: 14px; }
+.input-fields select { width: 100%; min-width: 0; min-height: 48px; padding: 0 13px; }
+.input-fields button { justify-self: start; max-width: 100%; margin-top: 12px; }
 .setup-primary { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 28px; }
 .setup-back { display: block; border: 0; background: transparent; color: #aaa; padding: 0; margin: 24px 0 0; font-size: 13px; }
 .setup-form { margin-top: 32px; }
@@ -102,9 +106,6 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 .settings-section h2 { margin-bottom: 16px; }
 .settings-section .setup-form { margin-top: 24px; }
 .settings-section .setup-description { margin-bottom: 24px; }
-.settings-section .input-fields { display: grid; gap: 12px; margin-top: 24px; }
-.settings-section .input-fields select { width: 100%; min-width: 0; min-height: 48px; font: inherit; }
-.settings-section .input-fields button { justify-self: start; margin-top: 12px; }
 .settings-section .setup-message { margin-top: 20px; }
 
 .remote-control-key { flex-shrink: 0; min-width: 2ch; font-size: 24px; font-weight: 700; text-align: center; }
