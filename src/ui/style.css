@@ -99,9 +99,10 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
   .home-tile strong { font-size: 18px; }
 }
 
-.settings-shell { min-height: 100svh; padding: 40px 24px 64px; overflow-y: auto; scroll-padding-block: 32px; }
+.settings-shell { height: 100svh; min-height: 0; padding: 40px 24px 64px; overflow-y: auto; overscroll-behavior-y: contain; scroll-padding-block: 32px; }
 .settings-content { width: min(800px, 100%); margin: 0 auto; }
-.settings-header { display: grid; gap: 24px; margin-bottom: 40px; }
+.settings-header { position: sticky; top: 0; z-index: 2; display: grid; gap: 24px; margin-bottom: 40px; padding: 16px 0; background: #141414; }
+.settings-header::before { content: ""; position: absolute; z-index: -1; top: -40px; right: 0; bottom: 0; left: 0; background: #141414; }
 .settings-header .setup-back { margin: 0; justify-self: start; }
 .settings-section { margin-top: 40px; }
 .settings-section h2 { margin-bottom: 16px; }
