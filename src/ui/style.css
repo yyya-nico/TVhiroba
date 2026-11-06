@@ -101,10 +101,11 @@ input { height: 48px; padding: 0 13px; border: 1px solid #666; border-radius: 6p
 
 .settings-shell { height: 100svh; min-height: 0; padding: 40px 24px 64px; overflow-y: auto; overscroll-behavior-y: contain; scroll-padding-block: 32px; }
 .settings-content { width: min(800px, 100%); margin: 0 auto; }
-.settings-header { position: sticky; top: 0; z-index: 2; display: grid; gap: 24px; margin-bottom: 40px; padding: 16px 0; background: #141414; }
+.settings-header { position: sticky; top: 0; z-index: 2; display: grid; gap: 24px; margin-bottom: 20px; padding-bottom: 20px; background: #141414; }
 .settings-header::before { content: ""; position: absolute; z-index: -1; top: -40px; right: 0; bottom: 0; left: 0; background: #141414; }
 .settings-header .setup-back { margin: 0; justify-self: start; }
-.settings-section { margin-top: 40px; }
+.settings-section { margin-top: 20px; }
+.settings-section + .settings-section { margin-top: 40px; }
 .settings-section h2 { margin-bottom: 16px; }
 .settings-section .setup-form { margin-top: 24px; }
 .settings-section .setup-description { margin-bottom: 24px; }
