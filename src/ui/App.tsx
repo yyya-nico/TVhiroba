@@ -1,6 +1,6 @@
 import { readExternalLinks, type ExternalLink } from './externalLinks';
 import { useAutoHideControls } from './useAutoHideControls';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import Home from './Home';
 import TV, { type TvService } from './TV';
 import Input, { readInputDevice, type InputDevice } from './Input';
@@ -34,6 +34,7 @@ export default function App() {
   const next = inSetup ? setupDestination(search) : path;
   const [message, setMessage] = useState('接続先を設定してください');
   const [busy, setBusy] = useState(false);
+  const channelRefreshInFlight = useRef(false);
   const setupView: SetupView = !configLoaded ? 'loading' : path === '/setup/links' ? 'links' : path === '/setup/input' ? 'input' : path === '/setup/connection' ? 'connection' : 'welcome';
 
   useEffect(() => {
@@ -90,7 +91,8 @@ export default function App() {
   }, [configLoaded, config.mirakcUrl, inputConfigured, linksConfigured, inputDevice, path, pathname, search]);
 
   useEffect(() => { void json<Config>('/api/config').then((value) => { setConfig(value); if (value.mirakcUrl) { setAddress(value.mirakcUrl); void loadChannels(); } }).catch((e) => { setMessage(e.message); }).finally(() => setConfigLoaded(true)); }, []);
-  async function loadChannels() {
+  const loadChannels = useCallback(async () => {
+    channelRefreshInFlight.current = true;
     setBusy(true); setMessage('チャンネルと番組情報を取得中…');
     try {
       const data = await json<ChannelResponse>('/api/tvhiroba/channels');
@@ -98,8 +100,27 @@ export default function App() {
       const visibleCount = data.channels.reduce((count, channel) => count + channel.services.filter(hasCurrentProgram).length, 0);
       setMessage(`${visibleCount}サービスに現在の番組情報があります`);
     } catch (error) { setMessage(error instanceof Error ? error.message : 'チャンネル情報を取得できませんでした'); }
-    finally { setBusy(false); }
-  }
+    finally { channelRefreshInFlight.current = false; setBusy(false); }
+  }, []);
+
+  useEffect(() => {
+    if (screen !== 'tv' || !config.mirakcUrl) return;
+    let timeout: ReturnType<typeof setTimeout>;
+    let stopped = false;
+    let nextRefreshAt = (Math.floor(Date.now() / 30_000) + 1) * 30_000;
+    const scheduleNextRefresh = () => {
+      const delay = Math.max(0, nextRefreshAt - Date.now());
+      timeout = setTimeout(() => {
+        if (stopped) return;
+        // Do not overlap channel requests; the next tick remains aligned to the clock.
+        if (!channelRefreshInFlight.current) void loadChannels();
+        nextRefreshAt += 30_000;
+        scheduleNextRefresh();
+      }, delay);
+    };
+    scheduleNextRefresh();
+    return () => { stopped = true; clearTimeout(timeout); };
+  }, [screen, config.mirakcUrl, loadChannels]);
   async function saveAddress(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setMessage('接続を確認中…');
     try {
@@ -119,7 +140,7 @@ export default function App() {
   const openSettings = () => { setMessage(''); navigate('/settings'); };
   const goHome = () => { navigate('/'); setMessage(''); };
 
-  if (screen === 'tv') return <TV services={channels.flatMap((channel) => channel.services)} message={message} onMessage={setMessage} busy={busy} canRefresh={Boolean(config.mirakcUrl)} onRefresh={() => void loadChannels()} onHome={goHome} Shell={AppShell} />;
+  if (screen === 'tv') return <TV services={channels.flatMap((channel) => channel.services)} message={message} onMessage={setMessage} busy={busy} onHome={goHome} Shell={AppShell} />;
 
   return <AppShell home={screen === 'home'} autoHideTitle={screen === 'input'}>
     {screen === 'input' && inputDevice

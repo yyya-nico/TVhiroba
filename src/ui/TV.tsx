@@ -16,13 +16,11 @@ type TVProps = {
   message: string;
   onMessage: (message: string) => void;
   busy: boolean;
-  canRefresh: boolean;
-  onRefresh: () => void;
   onHome: () => void;
   Shell: ComponentType<AppShellProps>;
 };
 
-export default function TV({ services: availableServices, message, onMessage: setMessage, busy, canRefresh, onRefresh, onHome, Shell }: TVProps) {
+export default function TV({ services: availableServices, message, onMessage: setMessage, busy, onHome, Shell }: TVProps) {
   const [selected, setSelected] = useState<TvService | null>(null);
   const [controlsVisible, setControlsVisible] = useAutoHideControls(Boolean(selected), selected);
   const playbackStartedRef = useRef(false);
@@ -196,7 +194,7 @@ export default function TV({ services: availableServices, message, onMessage: se
     <div className="player-frame">{selected && <video ref={videoRef} autoPlay playsInline onPlaying={onPlaying} />}</div>
     <header className="now-playing"><div><h1>{selected?.name ?? 'チャンネルを選択'}</h1>{selected?.currentProgram && <p className="watching-title">{selected.currentProgram.name}</p>}</div><span className="status-message" role="status">{message}</span></header>
     <section className="viewer-overlay" aria-label="テレビの選局">
-      <div className="list-heading"><h2>チャンネル <span>{services.length}</span></h2><div className="channel-actions"><button className="icon-button" onClick={onRefresh} disabled={!canRefresh || busy} aria-label="一覧を更新">↻</button></div></div>
+      <div className="list-heading"><h2>チャンネル <span>{services.length}</span></h2></div>
       <div className="broadcast-types" role="group" aria-label="放送種別">{broadcastTypes.map((type) => <button key={type} type="button" aria-pressed={broadcastType === type} onClick={() => { onBroadcastType(type); channelListRef.current?.scrollTo({ top: 0 }); }}>{broadcastLabels[type] ?? type}</button>)}</div>
       {busy && services.length === 0 ? <div className="empty-state">チャンネルと番組情報を読み込み中…</div> : displayedServices.length === 0 ? <div className="empty-state">この放送種別には現在の番組情報があるサービスがありません。</div> : <div className="channel-list" ref={channelListRef}>{displayedServices.map((service) => <button key={service.id} className={`program-service ${selected?.id === service.id ? 'selected' : ''}`} aria-pressed={selected?.id === service.id} data-remote-focus={selected?.id === service.id ? 'selected' : undefined} onFocus={(event) => event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest' })} onClick={() => onSelect(service)}>
           <span className="service-name-line">{service.remoteControlKeyId != null && <span className="remote-control-key" aria-label={`リモコン番号 ${service.remoteControlKeyId}`}>{service.remoteControlKeyId}</span>}<strong>{service.name}</strong><span className="service-id">{selected?.id === service.id ? '視聴中' : service.channelType}</span></span>
