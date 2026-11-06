@@ -11,7 +11,6 @@ import { setupDestination, setupRedirect, setupUrl, useRoute } from './routing';
 type TvChannel = { type: string; channel: string; name: string; services: TvService[] };
 type ChannelResponse = { channels: TvChannel[]; programGuideAvailable: boolean; serviceCount: number; servicesWithGuide: number; generatedAt: number };
 type Config = { mirakcUrl: string };
-const hasCurrentProgram = (service: TvService) => Boolean(service.currentProgram?.name?.trim());
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const body = await response.json();
