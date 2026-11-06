@@ -16,6 +16,7 @@ h1, h2, p { margin: 0; }
 .now-playing h1 { font-size: 24px; font-weight: 550; }
 .watching-title { color: #ccc; font-size: 14px; margin-top: 6px; }
 .status-message { color: #bbb; font-size: 12px; max-width: 45%; overflow-wrap: anywhere; }
+.toast-message { position: fixed; z-index: 10; left: 50%; bottom: max(32px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); padding: 14px 20px; border: 1px solid #666; border-radius: 8px; background: #222; color: #fff; text-align: center; font-size: 14px; line-height: 1.5; box-shadow: 0 4px 16px rgb(0 0 0 / 35%); pointer-events: none; }
 .list-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 16px; }
 .list-heading h2 { font-size: 14px; font-weight: 500; }
 .list-heading h2 span { color: #aaa; margin-left: 8px; font-size: 12px; }

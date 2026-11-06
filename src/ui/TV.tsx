@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType }
 import type { AppShellProps } from './App';
 import { Mpeg2TsPlayer } from '../../vendor/mpeg2toh264-player/src/index.js';
 import { readTvPreferences, saveTvPreferences } from './tvPreferences';
+import Toast from './Toast';
 
 export type TvProgram = { id?: number; name?: string; description?: string; startAt: number; duration: number };
 export type TvService = { id: number; serviceId: number; networkId?: number; remoteControlKeyId?: number; name: string; type?: number; channelType: string; isSubchannel: boolean; currentProgram: TvProgram | null; nextProgram: TvProgram | null };
@@ -31,6 +32,8 @@ export default function TV({ services: availableServices, message, onMessage: se
   if (preferencesRef.current === null) preferencesRef.current = readTvPreferences();
   const preferences = preferencesRef.current;
   const [broadcastType, setBroadcastType] = useState(preferences.broadcastType);
+  const [toast, setToast] = useState<{ message: string; id: number } | null>(null);
+  const toastIdRef = useRef(0);
   const channelListRef = useRef<HTMLDivElement>(null);
   const channelNumberCycleRef = useRef<{ key: number; serviceId: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -134,6 +137,7 @@ export default function TV({ services: availableServices, message, onMessage: se
         const matches = displayedServices.filter((service) => service.remoteControlKeyId === remoteKey);
         if (!matches.length) {
           channelNumberCycleRef.current = null;
+          setToast({ message: `リモコン番号 ${remoteKey} のチャンネルはありません`, id: ++toastIdRef.current });
           return;
         }
         const previous = channelNumberCycleRef.current;
@@ -203,5 +207,6 @@ export default function TV({ services: availableServices, message, onMessage: se
         </button>)}</div>}
     </section>
     <button className="home-back" onClick={onHome}>← ホーム</button>
+    {toast && <Toast key={toast.id} message={toast.message} onDismiss={() => setToast(null)} />}
   </Shell>;
 }

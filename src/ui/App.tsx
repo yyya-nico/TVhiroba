@@ -40,7 +40,9 @@ export default function App() {
     const onRemoteKeys = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
+      // Checkboxes still need the remote arrow handler so focus can leave them.
+      // Text fields and selects keep their native arrow-key behavior.
+      if (target?.closest('input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]')) return;
       if (event.key === 'Escape') {
         if (pathname === '/') return;
         event.preventDefault();
