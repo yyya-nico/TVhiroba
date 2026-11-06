@@ -97,8 +97,7 @@ export default function App() {
     try {
       const data = await json<ChannelResponse>('/api/tvhiroba/channels');
       setChannels(data.channels);
-      const visibleCount = data.channels.reduce((count, channel) => count + channel.services.filter(hasCurrentProgram).length, 0);
-      setMessage(`${visibleCount}サービスに現在の番組情報があります`);
+      setMessage('');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'チャンネル情報を取得できませんでした'); }
     finally { channelRefreshInFlight.current = false; setBusy(false); }
   }, []);
